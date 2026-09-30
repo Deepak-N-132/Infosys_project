@@ -1,4 +1,4 @@
-# AI-Powered Food Freshness & Quality Detection Platform
+# AI-Powered Food Freshness Monitoring Platform
 
 An end-to-end intelligent system for automated produce freshness classification, dynamic shelf-life estimation, inventory monitoring, and spoilage risk analytics. Built with Deep Learning, FastAPI, MongoDB, and a modern React frontend.
 
