@@ -1,0 +1,25 @@
+,Banana - Fresh,Bittermelon - Fresh,Cucumber - Fresh,Eggplant - Fresh,Orange - Fresh,Papaya - Fresh,Pineapple - Fresh,Tomato - Fresh,Banana - Rotten,Bittermelon - Rotten,Cucumber - Rotten,Eggplant - Rotten,Orange - Rotten,Papaya - Rotten,Pineapple - Rotten,Tomato - Rotten,Banana - Semi-Fresh,Bittermelon - Semi-Fresh,Cucumber - Semi-Fresh,Orange - Semi-Fresh,Papaya - Semi-Fresh,Pineapple - Semi-Fresh,Tomato - Semi-Fresh,Eggplant - Semi-Fresh
+Banana - Fresh,77,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,0,0,0,0,0,0,0
+Bittermelon - Fresh,0,84,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0
+Cucumber - Fresh,0,0,71,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,10,0,7,0,0,0
+Eggplant - Fresh,0,0,0,5,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,82
+Orange - Fresh,0,0,0,0,79,0,0,0,0,0,0,0,0,1,0,0,0,0,1,4,0,0,0,1
+Papaya - Fresh,0,0,0,0,0,39,0,0,0,0,0,0,0,2,0,0,0,0,0,0,47,0,0,0
+Pineapple - Fresh,0,0,0,0,0,0,51,0,0,0,0,0,0,0,6,0,0,0,0,0,0,31,0,0
+Tomato - Fresh,0,0,0,0,0,0,0,42,0,0,0,0,0,0,0,4,0,0,0,0,0,0,43,0
+Banana - Rotten,0,0,0,0,0,0,0,0,82,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0
+Bittermelon - Rotten,0,0,0,0,0,0,0,0,0,81,0,0,0,0,0,0,0,8,0,0,0,0,0,0
+Cucumber - Rotten,0,0,0,0,0,0,0,0,0,0,79,0,0,0,0,0,0,0,9,0,0,0,0,0
+Eggplant - Rotten,0,0,0,0,0,0,0,0,0,0,0,84,0,0,0,0,0,0,0,0,0,0,0,5
+Orange - Rotten,0,0,0,0,0,0,0,0,0,0,0,0,87,0,0,0,0,0,0,2,0,0,0,0
+Papaya - Rotten,0,0,0,0,0,0,0,0,0,0,0,0,0,84,0,0,0,0,0,0,4,0,0,0
+Pineapple - Rotten,0,0,0,0,0,0,0,0,0,0,0,0,0,0,89,0,0,0,0,0,0,0,0,0
+Tomato - Rotten,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,88,0,0,0,0,0,0,1,0
+Banana - Semi-Fresh,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,86,0,0,0,0,0,0,0
+Bittermelon - Semi-Fresh,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,86,0,0,0,0,0,0
+Cucumber - Semi-Fresh,0,0,1,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,84,0,0,0,0,0
+Orange - Semi-Fresh,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,84,0,0,0,0
+Papaya - Semi-Fresh,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,89,0,0,0
+Pineapple - Semi-Fresh,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,86,0,0
+Tomato - Semi-Fresh,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,0,0,0,0,0,80,0
+Eggplant - Semi-Fresh,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,86

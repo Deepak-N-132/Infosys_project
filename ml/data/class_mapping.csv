@@ -1,0 +1,25 @@
+class_id,folder_name,food,freshness,min_days,max_days
+0,Fresh Banana(1-4),Banana,Fresh,1,4
+1,Fresh Bittermelon(1-3),Bittermelon,Fresh,1,3
+2,Fresh Cucumber(1-6),Cucumber,Fresh,1,6
+3,Fresh eggplant(1-4),Eggplant,Fresh,1,4
+4,Fresh Orange(1-9),Orange,Fresh,1,9
+5,Fresh Papaya(1-4),Papaya,Fresh,1,4
+6,Fresh pineapple(1-15),Pineapple,Fresh,1,15
+7,Fresh Tomato(1-10),Tomato,Fresh,1,10
+8,Rotten banana(7-13),Banana,Rotten,7,13
+9,Rotten Bittermelon(5-8),Bittermelon,Rotten,5,8
+10,Rotten Cucumber(12-20),Cucumber,Rotten,12,20
+11,Rotten eggplant(8-15),Eggplant,Rotten,8,15
+12,Rotten Orange(20-35),Orange,Rotten,20,35
+13,Rotten Papaya(7-12),Papaya,Rotten,7,12
+14,Rotten Pineapple(25-35),Pineapple,Rotten,25,35
+15,Rotten Tomato(24-35),Tomato,Rotten,24,35
+16,Semi fresh banana(4-7),Banana,Semi-Fresh,4,7
+17,Semi Fresh Bittermelon ( 3-5),Bittermelon,Semi-Fresh,3,5
+18,Semi Fresh Cucumber(6-12),Cucumber,Semi-Fresh,6,12
+19,Semi fresh Orange(9-20),Orange,Semi-Fresh,9,20
+20,Semi Fresh Papaya(4-7),Papaya,Semi-Fresh,4,7
+21,Semi fresh Pineapple (15-25),Pineapple,Semi-Fresh,15,25
+22,Semi fresh Tomato(10-24),Tomato,Semi-Fresh,10,24
+23,Semi_Fresh eggplant(4-8),Eggplant,Semi-Fresh,4,8

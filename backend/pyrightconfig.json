@@ -1,0 +1,14 @@
+{
+  "venvPath": "D:/info_project/ml",
+  "venv": "venv312",
+  "extraPaths": [
+    "D:/info_project/backend",
+    "D:/info_project/ml",
+    "D:/info_project/ml/venv312/Lib/site-packages"
+  ],
+  "reportAttributeAccessIssue": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportArgumentType": "none",
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none"
+}
