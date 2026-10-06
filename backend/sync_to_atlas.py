@@ -1,10 +1,15 @@
-import sys
 import os
 import certifi
+from dotenv import load_dotenv
 from pymongo import MongoClient
 
-atlas_uri = "mongodb+srv://deepaknandi2006_db_user:kb0fbN6s45Vq0Ixn@cluster0.rbyibfz.mongodb.net/food_freshness?retryWrites=true&w=majority&appName=Cluster0"
+load_dotenv()
+
+atlas_uri = os.getenv("MONGO_DETAILS")
 local_uri = "mongodb://localhost:27017"
+
+if not atlas_uri or "mongodb.net" not in atlas_uri:
+    raise SystemExit("Set MONGO_DETAILS (your Atlas URI) in .env first.")
 
 print("=" * 60)
 print("MongoDB Cloud Atlas Sync Utility")
@@ -18,7 +23,7 @@ try:
     print(f"   [OK] Local collections found: {local_colls}")
 
     print("\n2. Connecting to MongoDB Atlas Cloud...")
-    atlas_client = MongoClient(atlas_uri, tlsCAFile=certifi.where(), tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=8000)
+    atlas_client = MongoClient(atlas_uri, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=8000)
     atlas_client.admin.command("ping")
     atlas_db = atlas_client.food_freshness
     print("   [OK] Successfully connected to MongoDB Atlas Cloud!")
