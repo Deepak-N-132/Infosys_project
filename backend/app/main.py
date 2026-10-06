@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from dotenv import load_dotenv
 
 import os
 import time
@@ -59,11 +60,20 @@ from .inventory_insights import (
 # CONFIG
 # ============================================================
 
-MODEL_PATH = r"D:\info_project\ml\models\food_freshness_model.keras"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend/
+PROJECT_DIR = os.path.dirname(BASE_DIR)                                 # project root
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 
-DATA_PATH = r"D:\info_project\ml\data\class_mapping.csv"
-
-UPLOAD_DIR = r"D:\info_project\backend\uploads"
+MODEL_PATH = os.getenv(
+    "MODEL_PATH",
+    os.path.join(PROJECT_DIR, "ml", "models", "food_freshness_model.keras"),
+)
+DATA_PATH = os.getenv(
+    "CLASS_MAPPING_PATH",
+    os.path.join(PROJECT_DIR, "ml", "data", "class_mapping.csv"),
+)
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.join(BASE_DIR, "uploads"))
 
 IMG_SIZE = (224, 224)
 
@@ -72,7 +82,9 @@ IMG_SIZE = (224, 224)
 # AUTHENTICATION CONFIG & UTILS
 # ============================================================
 
-SECRET_KEY = "freshcheck-ai-super-secret-key-change-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY is not set. Add it to your .env file.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
@@ -297,9 +309,15 @@ app = FastAPI(
 # CORS
 # ============================================================
 
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
