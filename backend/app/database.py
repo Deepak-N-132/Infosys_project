@@ -20,6 +20,10 @@ except ImportError:
     ca_file = None
 
 
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def connect_mongo():
     primary_uri = MONGO_DETAILS
     fallback_uri = "mongodb://localhost:27017"
@@ -124,12 +128,33 @@ class User:
         self.email = data.get("email")
         self.hashed_password = data.get("hashed_password")
         self.role = data.get("role", "Consumer")
-        self.created_at = data.get("created_at") or datetime.utcnow()
+        self.created_at = data.get("created_at") or utc_now()
 
     @classmethod
     def find_by_email(cls, email: str):
         data = users_collection.find_one({"email": email})
         return cls(data) if data else None
+
+    @classmethod
+    def find_all(cls):
+        cursor = users_collection.find().sort("created_at", -1)
+        return [cls(doc) for doc in cursor]
+
+    @classmethod
+    def find_by_id(cls, user_id: str):
+        try:
+            data = users_collection.find_one({"_id": ObjectId(user_id)})
+            return cls(data) if data else None
+        except Exception:
+            return None
+
+    @classmethod
+    def update_role(cls, user_id: str, new_role: str) -> bool:
+        try:
+            res = users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": {"role": new_role}})
+            return res.matched_count > 0
+        except Exception:
+            return False
 
     @classmethod
     def create(cls, name: str, email: str, hashed_password: str, role: str):
@@ -138,7 +163,7 @@ class User:
             "email": email,
             "hashed_password": hashed_password,
             "role": role,
-            "created_at": datetime.utcnow()
+            "created_at": utc_now()
         }
         result = users_collection.insert_one(data)
         data["_id"] = result.inserted_id
@@ -167,7 +192,7 @@ class Prediction:
         self.color_distribution = data.get("color_distribution") or {}
         self.storage_recommendations = data.get("storage_recommendations") or {}
         self.shelf_life_prediction = data.get("shelf_life_prediction") or {}
-        self.created_at = data.get("created_at") or datetime.utcnow()
+        self.created_at = data.get("created_at") or utc_now()
 
     @classmethod
     def create(
@@ -210,7 +235,7 @@ class Prediction:
             "color_distribution": color_distribution or {},
             "storage_recommendations": storage_recommendations or {},
             "shelf_life_prediction": shelf_life_prediction or {},
-            "created_at": datetime.utcnow()
+            "created_at": utc_now()
         }
         result = predictions_collection.insert_one(data)
         data["_id"] = result.inserted_id
@@ -219,6 +244,11 @@ class Prediction:
     @classmethod
     def find_by_user(cls, user_id: str):
         cursor = predictions_collection.find({"user_id": user_id}).sort("created_at", -1)
+        return [cls(doc) for doc in cursor]
+
+    @classmethod
+    def find_all(cls):
+        cursor = predictions_collection.find().sort("created_at", -1)
         return [cls(doc) for doc in cursor]
 
     @classmethod
@@ -267,7 +297,7 @@ class Inventory:
         self.storage = data.get("storage")
         self.expiry = data.get("expiry")
         self.image = data.get("image")
-        self.created_at = data.get("created_at") or datetime.utcnow()
+        self.created_at = data.get("created_at") or utc_now()
 
     @classmethod
     def create(
@@ -290,7 +320,7 @@ class Inventory:
             "storage": storage,
             "expiry": expiry,
             "image": image,
-            "created_at": datetime.utcnow()
+            "created_at": utc_now()
         }
         result = inventory_collection.insert_one(data)
         data["_id"] = result.inserted_id
@@ -312,7 +342,7 @@ class Inventory:
     @classmethod
     def update_status(cls, item_id: str, new_status: str, new_storage: Optional[str] = None):
         try:
-            update_data: Dict[str, Any] = {"status": new_status, "updated_at": datetime.utcnow()}
+            update_data: Dict[str, Any] = {"status": new_status, "updated_at": utc_now()}
             if new_storage:
                 update_data["storage"] = new_storage
             result = inventory_collection.update_one(
@@ -329,9 +359,9 @@ class Inventory:
             query: Dict[str, Any] = {"_id": ObjectId(item_id)}
             if user_id:
                 query["user_id"] = user_id
-            
+
             update_data = {k: v for k, v in kwargs.items() if v is not None}
-            update_data["updated_at"] = datetime.utcnow()
+            update_data["updated_at"] = utc_now()
 
             result = inventory_collection.update_one(query, {"$set": update_data})
             return result.matched_count > 0
@@ -353,6 +383,11 @@ class Inventory:
         except Exception:
             return False
 
+    @classmethod
+    def find_all(cls):
+        cursor = inventory_collection.find().sort("created_at", -1)
+        return [cls(doc) for doc in cursor]
+
 
 class SpoilageAlert:
     def __init__(self, data):
@@ -371,8 +406,8 @@ class SpoilageAlert:
         self.action_required = data.get("action_required", "Immediate disposal required")
         self.status_state = data.get("status_state", "Active")  # Active, Quarantined, Disposed, Acknowledged
         self.notes = data.get("notes", "")
-        self.created_at = data.get("created_at") or datetime.utcnow()
-        self.updated_at = data.get("updated_at") or datetime.utcnow()
+        self.created_at = data.get("created_at") or utc_now()
+        self.updated_at = data.get("updated_at") or utc_now()
 
     @classmethod
     def create_or_update(
@@ -392,7 +427,7 @@ class SpoilageAlert:
         notes: str = ""
     ):
         existing = spoilage_alerts_collection.find_one({"user_id": user_id, "source_id": source_id})
-        now = datetime.utcnow()
+        now = utc_now()
         if existing:
             current_state = existing.get("status_state", "Active")
             update_fields: Dict[str, Any] = {
@@ -460,7 +495,7 @@ class SpoilageAlert:
             update_data: Dict[str, Any] = {
                 "status_state": new_state,
                 "notes": notes,
-                "updated_at": datetime.utcnow()
+                "updated_at": utc_now()
             }
             res = spoilage_alerts_collection.update_one(
                 {"_id": ObjectId(alert_id)},
@@ -472,7 +507,7 @@ class SpoilageAlert:
 
     @classmethod
     def sync_for_user(cls, user_id: str):
-        now = datetime.utcnow()
+        now = utc_now()
         inv_items = Inventory.find_by_user(user_id)
         scans = Prediction.find_by_user(user_id)
 
@@ -484,8 +519,8 @@ class SpoilageAlert:
             days_left = 999
             if item.expiry:
                 try:
-                    exp_date = datetime.strptime(item.expiry, "%Y-%m-%d")
-                    days_left = (exp_date - now).days
+                    exp_date = datetime.strptime(str(item.expiry)[:10], "%Y-%m-%d").date()
+                    days_left = (exp_date - now.date()).days
                 except Exception:
                     pass
 
@@ -537,7 +572,7 @@ class OTPRecord:
         self.email = data.get("email")
         self.code = data.get("code")
         self.expires_at = data.get("expires_at")
-        self.created_at = data.get("created_at") or datetime.utcnow()
+        self.created_at = data.get("created_at") or utc_now()
 
     @classmethod
     def save_otp(cls, email: str, code: str, expires_in_seconds: int = 300):
@@ -546,7 +581,7 @@ class OTPRecord:
             {"email": email},
             {
                 "$set": {
-                    "code": str(code),
+                    "code": code,
                     "expires_at": expires_at,
                     "created_at": datetime.now(timezone.utc)
                 }
@@ -584,7 +619,7 @@ class StorageSettings:
         self.light_exposure = str(data.get("light_exposure", self.DEFAULT_SETTINGS["light_exposure"]))
         self.auto_alert_expiry_days = int(data.get("auto_alert_expiry_days", self.DEFAULT_SETTINGS["auto_alert_expiry_days"]))
         self.quarantine_temp = float(data.get("quarantine_temp", self.DEFAULT_SETTINGS["quarantine_temp"]))
-        self.updated_at = data.get("updated_at") or datetime.utcnow()
+        self.updated_at = data.get("updated_at") or utc_now()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -607,8 +642,8 @@ class StorageSettings:
                 data = {
                     "user_id": user_id,
                     **cls.DEFAULT_SETTINGS,
-                    "created_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow()
+                    "created_at": utc_now(),
+                    "updated_at": utc_now()
                 }
                 res = storage_settings_collection.insert_one(data)
                 data["_id"] = res.inserted_id
@@ -621,7 +656,7 @@ class StorageSettings:
         try:
             valid_keys = set(cls.DEFAULT_SETTINGS.keys())
             filtered = {k: v for k, v in updates.items() if k in valid_keys}
-            filtered["updated_at"] = datetime.utcnow()
+            filtered["updated_at"] = utc_now()
             storage_settings_collection.update_one(
                 {"user_id": user_id},
                 {"$set": filtered},

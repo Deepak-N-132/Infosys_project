@@ -6,8 +6,8 @@ composite Food Quality Index (FQI) scoring, and spoilage risk evaluation.
 
 import numpy as np
 from PIL import Image
-from scipy.ndimage import laplace
-from typing import Dict, Any
+from scipy.ndimage import laplace  # type: ignore
+from typing import Dict, Any, Optional
 
 
 def analyze_image_features(image_path: str) -> Dict[str, Any]:
@@ -140,6 +140,15 @@ def compute_food_quality_score(
     shelf_life_index = round(float(np.clip((max_days / 30.0) * 100.0, 10.0, 100.0)), 1)
     storage_compliance = 92.0 if fqi >= 75 else (70.0 if fqi >= 50 else 35.0)
 
+    # Official Weighted Scoring Model (Section 7: Visual 40%, Storage 25%, Shelf-Life 20%, Product Age 15%)
+    product_age_score = round(float(np.clip(100.0 - (browning_ratio * 2.2), 10.0, 100.0)), 1)
+    weighted_model = compute_weighted_freshness_score(
+        visual_condition_score=visual_score,
+        storage_condition_score=storage_compliance,
+        shelf_life_score=shelf_life_index,
+        product_age_score=product_age_score
+    )
+
     # Storage recommendations matrix
     storage_advice = {
         "refrigerated": f"Optimal (1°C - 4°C): Retains quality for up to {max_days} days.",
@@ -155,9 +164,81 @@ def compute_food_quality_score(
             "visual_score": visual_score,
             "shelf_life_index": shelf_life_index,
             "surface_integrity": surface_integrity,
-            "storage_compliance": storage_compliance
+            "storage_compliance": storage_compliance,
+            "product_age_score": product_age_score
         },
+        "weighted_scoring_model": weighted_model,
         "storage_recommendations": storage_advice
+    }
+
+
+def compute_weighted_freshness_score(
+    visual_condition_score: float,
+    storage_condition_score: float,
+    shelf_life_score: float,
+    product_age_score: Optional[float] = None,
+    product_age_days: Optional[float] = None,
+    max_shelf_life_days: float = 10.0
+) -> Dict[str, Any]:
+    """
+    Official Weighted Scoring Model (Section 7):
+    Freshness Score = Visual Condition Analysis (40%)
+                    + Storage Conditions (25%)
+                    + Shelf-Life Prediction (20%)
+                    + Product Age (15%)
+    """
+    if product_age_score is None:
+        if product_age_days is not None:
+            age_ratio = min(1.0, max(0.0, float(product_age_days) / max(1.0, float(max_shelf_life_days))))
+            product_age_score = round(max(0.0, 100.0 * (1.0 - age_ratio)), 1)
+        else:
+            product_age_score = 80.0
+
+    v_contrib = round(float(visual_condition_score) * 0.40, 2)
+    s_contrib = round(float(storage_condition_score) * 0.25, 2)
+    sl_contrib = round(float(shelf_life_score) * 0.20, 2)
+    a_contrib = round(float(product_age_score) * 0.15, 2)
+    total_score = round(float(np.clip(v_contrib + s_contrib + sl_contrib + a_contrib, 0.0, 100.0)), 1)
+
+    if total_score >= 80.0:
+        category = "Fresh"
+    elif total_score >= 65.0:
+        category = "Good"
+    elif total_score >= 50.0:
+        category = "Acceptable"
+    elif total_score >= 35.0:
+        category = "Near Spoilage"
+    else:
+        category = "Spoiled"
+
+    return {
+        "freshness_score": total_score,
+        "final_weighted_freshness_score": total_score,
+        "freshness_category": category,
+        "weights": {
+            "visual_condition_pct": 40,
+            "storage_conditions_pct": 25,
+            "shelf_life_prediction_pct": 20,
+            "product_age_pct": 15
+        },
+        "breakdown": {
+            "visual_condition_40pct": v_contrib,
+            "storage_conditions_25pct": s_contrib,
+            "shelf_life_prediction_20pct": sl_contrib,
+            "product_age_15pct": a_contrib
+        },
+        "component_contributions": {
+            "visual_condition": v_contrib,
+            "storage_conditions": s_contrib,
+            "shelf_life_prediction": sl_contrib,
+            "product_age": a_contrib
+        },
+        "raw_inputs": {
+            "visual_condition_score": round(float(visual_condition_score), 1),
+            "storage_condition_score": round(float(storage_condition_score), 1),
+            "shelf_life_score": round(float(shelf_life_score), 1),
+            "product_age_score": round(float(product_age_score), 1)
+        }
     }
 
 

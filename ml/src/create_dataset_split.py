@@ -9,7 +9,8 @@ from sklearn.model_selection import StratifiedGroupKFold
 # CONFIGURATION
 # ============================================================
 
-DATA_DIR = Path(r"D:\info_project\ml\data")
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
 
 INPUT_FILE = DATA_DIR / "clean_metadata.csv"
 

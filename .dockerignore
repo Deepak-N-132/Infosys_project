@@ -1,0 +1,17 @@
+.git
+.gitignore
+.vscode
+dataset/
+node_modules/
+*/node_modules/
+dist/
+*/dist/
+venv/
+*/venv/
+venv312/
+*/venv312/
+__pycache__/
+*/__pycache__/
+*.pyc
+*.log
+.pytest_cache/

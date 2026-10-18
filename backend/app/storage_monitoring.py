@@ -6,7 +6,7 @@ evaluates compliance against biological thresholds, and executes automated mitig
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
-import random
+import uuid
 
 
 STORAGE_ZONES_CONFIG: Dict[str, Dict[str, Any]] = {
@@ -258,7 +258,7 @@ def execute_storage_workflow(
     action_upper = workflow_action.upper().strip()
 
     log_entry = {
-        "id": f"wf-{int(datetime.now().timestamp())}-{random.randint(100, 999)}",
+        "id": f"wf-{int(datetime.now(timezone.utc).timestamp())}-{uuid.uuid4().hex[:6]}",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "zone_id": zone_id,
         "zone_name": zone_cfg["name"],

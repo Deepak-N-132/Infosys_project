@@ -10,7 +10,10 @@ from PIL import Image
 # CONFIGURATION
 # ============================================================
 
-DATA_DIR = Path(r"D:\info_project\ml\data")
+BASE_DIR = Path(__file__).resolve().parent.parent
+PROJECT_DIR = BASE_DIR.parent
+DATA_DIR = BASE_DIR / "data"
+DATASET_DIR = PROJECT_DIR / "dataset" / "Processed Data"
 
 TRAIN_FILE = DATA_DIR / "train.csv"
 
@@ -45,9 +48,7 @@ print(
 
 def get_image_path(relative_path):
 
-    return Path(
-        r"D:\info_project\dataset\Processed Data"
-    ) / relative_path
+    return DATASET_DIR / relative_path
 
 
 # ============================================================

@@ -8,10 +8,11 @@ from tensorflow.keras.applications import MobileNetV2
 # CONFIGURATION
 # ============================================================
 
-BASE_DIR = r"D:\info_project\ml"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.path.dirname(BASE_DIR)
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
-IMAGE_BASE_DIR = r"D:\info_project\dataset\Processed Data"
+IMAGE_BASE_DIR = os.path.join(PROJECT_DIR, "dataset", "Processed Data")
 
 TRAIN_CSV = os.path.join(DATA_DIR, "train.csv")
 VAL_CSV = os.path.join(DATA_DIR, "val.csv")

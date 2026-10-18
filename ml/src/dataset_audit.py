@@ -7,7 +7,9 @@ import re
 # CONFIGURATION
 # ============================================================
 
-DATASET_DIR = Path(r"D:\info_project\dataset\Processed Data")
+BASE_DIR = Path(__file__).resolve().parent.parent
+PROJECT_DIR = BASE_DIR.parent
+DATASET_DIR = PROJECT_DIR / "dataset" / "Processed Data"
 
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 

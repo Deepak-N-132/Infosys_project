@@ -6,7 +6,6 @@ relative humidity penalty functions, ethylene-accelerated ripening, and visual q
 
 import math
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta, timezone
 
 
 # Biological characteristics, optimal storage parameters, and ethylene sensitivity
@@ -201,11 +200,13 @@ def calculate_dynamic_shelf_life(
     min_days_baseline: Optional[int] = None,
     max_days_baseline: Optional[int] = None,
     air_circulation: str = "Medium",
-    light_exposure: str = "Low Light"
+    light_exposure: str = "Low Light",
+    packaging_type: str = "Breathable Film",
+    storage_duration_days: float = 0.0
 ) -> Dict[str, Any]:
     """
     Computes rigorous dynamic shelf life based on Arrhenius/Q10 kinetics,
-    observed visual quality score, and environmental microclimate.
+    observed visual quality score, microclimate parameters, packaging type, and duration.
     """
     profile = get_produce_profile(food_name)
     fresh_clean = freshness_label.lower().strip()
@@ -288,12 +289,24 @@ def calculate_dynamic_shelf_life(
     elif profile["ethylene_sensitive"] == "Moderate":
         ethylene_penalty += ethylene_exposure_ppm * 1.4
 
-    # 6. Combined kinetic decay rate
-    total_degradation_velocity = decay_multiplier * rh_penalty * ethylene_penalty
+    # 6. Packaging & Storage Duration Factor
+    pkg_clean = (packaging_type or "").lower().strip()
+    if "vacuum" in pkg_clean or "map" in pkg_clean or "modified" in pkg_clean:
+        packaging_multiplier = 1.35  # MAP / Vacuum slows oxidation & respiration
+    elif "clamshell" in pkg_clean or "sealed" in pkg_clean:
+        packaging_multiplier = 1.15  # Protection from physical abrasion & moisture
+    elif "unpackaged" in pkg_clean or "open" in pkg_clean:
+        packaging_multiplier = 0.85  # Higher dehydration and ambient ethylene uptake
+    else:  # Breathable Film / Standard
+        packaging_multiplier = 1.0
 
-    # Dynamic remaining days
-    remaining_days = (base_days * quality_factor) / max(0.2, total_degradation_velocity)
-    remaining_days = round(max(0.2, remaining_days), 1)
+    # Combined kinetic decay rate
+    total_degradation_velocity = (decay_multiplier * rh_penalty * ethylene_penalty) / max(0.5, packaging_multiplier)
+
+    # Dynamic remaining days after accounting for already elapsed storage duration
+    raw_remaining_days = (base_days * quality_factor) / max(0.2, total_degradation_velocity)
+    remaining_days = max(0.2, raw_remaining_days - max(0.0, float(storage_duration_days)))
+    remaining_days = round(remaining_days, 1)
     remaining_hours = round(remaining_days * 24.0, 1)
 
     # 7. Multi-Scenario Shelf Life Comparisons
@@ -322,7 +335,7 @@ def calculate_dynamic_shelf_life(
 
     # 8. Projected Decay Curve (Day 0 to End of Life)
     decay_trajectory: List[Dict[str, Any]] = []
-    projection_horizon = min(30, int(math.ceil(remaining_days)) + 2)
+    projection_horizon = min(30, math.ceil(remaining_days) + 2)
     step = 1 if projection_horizon <= 14 else max(1, projection_horizon // 10)
 
     for day in range(0, projection_horizon + 1, step):
@@ -359,7 +372,10 @@ def calculate_dynamic_shelf_life(
         "status": "Active",
         "decay_stage": decay_stage,
         "quality_index": round(quality_score, 1),
+        "packaging_type": packaging_type,
+        "storage_duration_days": storage_duration_days,
         "kinetics": {
+            "packaging_type": packaging_type,
             "arrhenius_velocity_multiplier": round(total_degradation_velocity, 2),
             "q10_factor": q10,
             "optimal_temp_c": optimal_t,

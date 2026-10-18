@@ -5,9 +5,10 @@ import pandas as pd
 # CONFIGURATION
 # ============================================================
 
-DATA_DIR = Path(r"D:\info_project\ml\data")
-
-DATASET_DIR = Path(r"D:\info_project\dataset\Processed Data")
+BASE_DIR = Path(__file__).resolve().parent.parent
+PROJECT_DIR = BASE_DIR.parent
+DATA_DIR = BASE_DIR / "data"
+DATASET_DIR = PROJECT_DIR / "dataset" / "Processed Data"
 
 MASTER_FILE = DATA_DIR / "master_metadata.csv"
 DUPLICATE_FILE = DATA_DIR / "duplicate_groups.csv"
@@ -39,8 +40,7 @@ def main():
     # --------------------------------------------------------
     # Convert master paths to absolute paths
     #
-    # master_metadata.csv contains paths relative to:
-    # D:\info_project\dataset\Processed Data
+    # master_metadata.csv contains paths relative to DATASET_DIR
     #
     # duplicate_groups.csv contains absolute paths.
     # --------------------------------------------------------

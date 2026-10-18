@@ -8,7 +8,8 @@ from sklearn.metrics import classification_report, confusion_matrix
 # CONFIG
 # ============================================================
 
-BASE_DIR = r"D:\info_project\ml"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.path.dirname(BASE_DIR)
 
 MODEL_PATH = os.path.join(
     BASE_DIR,
@@ -22,7 +23,11 @@ TEST_CSV = os.path.join(
     "test.csv"
 )
 
-IMAGE_BASE_DIR = r"D:\info_project\dataset\Processed Data"
+IMAGE_BASE_DIR = os.path.join(
+    PROJECT_DIR,
+    "dataset",
+    "Processed Data"
+)
 
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32

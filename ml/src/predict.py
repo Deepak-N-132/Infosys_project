@@ -7,7 +7,8 @@ import tensorflow as tf
 # CONFIG
 # ============================================================
 
-BASE_DIR = r"D:\info_project\ml"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIR = os.path.dirname(BASE_DIR)
 
 MODEL_PATH = os.path.join(
     BASE_DIR,
@@ -21,7 +22,11 @@ DATA_PATH = os.path.join(
     "class_mapping.csv"
 )
 
-IMAGE_BASE_DIR = r"D:\info_project\dataset\Processed Data"
+IMAGE_BASE_DIR = os.path.join(
+    PROJECT_DIR,
+    "dataset",
+    "Processed Data"
+)
 
 IMG_SIZE = (224, 224)
 

@@ -3,7 +3,9 @@ import certifi
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
-load_dotenv()
+base_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(base_dir, ".env"))
+load_dotenv(os.path.join(os.path.dirname(base_dir), ".env"))
 
 atlas_uri = os.getenv("MONGO_DETAILS")
 local_uri = "mongodb://localhost:27017"

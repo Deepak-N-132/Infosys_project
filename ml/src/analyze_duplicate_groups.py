@@ -1,10 +1,13 @@
 from pathlib import Path
 from collections import defaultdict
 import hashlib
+import re
 import pandas as pd
 
-DATASET_DIR = Path(r"D:\info_project\dataset\Processed Data")
-OUTPUT_FILE = Path(r"D:\info_project\ml\data\duplicate_groups.csv")
+BASE_DIR = Path(__file__).resolve().parent.parent
+PROJECT_DIR = BASE_DIR.parent
+DATASET_DIR = PROJECT_DIR / "dataset" / "Processed Data"
+OUTPUT_FILE = BASE_DIR / "data" / "duplicate_groups.csv"
 
 VALID_EXTENSIONS = {".jpg", ".jpeg"}
 
@@ -34,8 +37,6 @@ def get_labels(path):
         freshness = "Unknown"
 
     # Remove freshness and shelf-life
-    import re
-
     food = re.sub(
         r"\(\s*\d+\s*-\s*\d+\s*\)",
         "",

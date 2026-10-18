@@ -4,14 +4,13 @@ Computes inventory health indices, waste risk exposure, financial and environmen
 and category-level shelf-life distribution.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Sequence
 from datetime import datetime, timezone
-import math
 
 
 def compute_inventory_insights(
     inventory_items: List[Dict[str, Any]],
-    historical_scans: List[Dict[str, Any]]
+    historical_scans: Sequence[Any]
 ) -> Dict[str, Any]:
     """
     Computes global inventory health score, waste risk exposure,
