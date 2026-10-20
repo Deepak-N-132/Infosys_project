@@ -505,8 +505,8 @@ def database_status():
 
 
 @app.get("/debug-smtp")
-def debug_smtp():
-    """Diagnostic endpoint to inspect live SMTP/API connection and authentication status."""
+def debug_smtp(test_email: Optional[str] = None):
+    """Diagnostic endpoint to inspect live SMTP/API connection and test email delivery."""
     brevo_api_key = (os.getenv("BREVO_API_KEY") or "").strip()
     resend_api_key = (os.getenv("RESEND_API_KEY") or "").strip()
     smtp_host = (os.getenv("SMTP_HOST") or "").strip()
@@ -514,6 +514,15 @@ def debug_smtp():
     smtp_user = (os.getenv("SMTP_USER") or "").strip()
     smtp_pass = (os.getenv("SMTP_PASSWORD") or "").strip().replace(" ", "")
     smtp_from = (os.getenv("SMTP_FROM") or "").strip()
+
+    if test_email:
+        ok, msg = send_otp_email(test_email, "777888")
+        return {
+            "test_email": test_email,
+            "success": ok,
+            "message": msg,
+            "provider": "Brevo" if brevo_api_key else ("Resend" if resend_api_key else "SMTP")
+        }
 
     try:
         smtp_port = int(smtp_port_str)
