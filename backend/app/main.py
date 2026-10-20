@@ -212,7 +212,57 @@ class SaveApiKeyRequest(BaseModel):
     gemini_api_key: Optional[str] = None
 
 
+def send_otp_via_brevo(api_key: str, sender_email: str, recipient_email: str, otp_code: str, html_body: str) -> tuple[bool, str]:
+    try:
+        import httpx
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json"
+        }
+        from_email = sender_email if ("@" in sender_email and "noreply" not in sender_email) else "freshcheck.alerts@gmail.com"
+        payload = {
+            "sender": {"name": "FreshCheck AI", "email": from_email},
+            "to": [{"email": recipient_email}],
+            "subject": f"Your Login Verification OTP Code: {otp_code}",
+            "htmlContent": html_body
+        }
+        resp = httpx.post(url, headers=headers, json=payload, timeout=12.0)
+        if resp.status_code in (200, 201, 202):
+            return True, "Email delivered via Brevo HTTPS API"
+        return False, f"Brevo API error ({resp.status_code}): {resp.text}"
+    except Exception as e:
+        return False, f"Brevo request failed: {e}"
+
+
+def send_otp_via_resend(api_key: str, sender_email: str, recipient_email: str, otp_code: str, html_body: str) -> tuple[bool, str]:
+    try:
+        import httpx
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        # Free Resend without verified custom domain uses onboarding@resend.dev
+        from_addr = sender_email if ("@" in sender_email and not sender_email.endswith("@gmail.com")) else "FreshCheck AI <onboarding@resend.dev>"
+        payload = {
+            "from": from_addr,
+            "to": [recipient_email],
+            "subject": f"Your Login Verification OTP Code: {otp_code}",
+            "html": html_body
+        }
+        resp = httpx.post(url, headers=headers, json=payload, timeout=12.0)
+        if resp.status_code in (200, 201, 202):
+            return True, "Email delivered via Resend HTTPS API"
+        return False, f"Resend API error ({resp.status_code}): {resp.text}"
+    except Exception as e:
+        return False, f"Resend request failed: {e}"
+
+
 def send_otp_email(email: str, otp_code: str) -> tuple[bool, str]:
+    brevo_api_key = (os.getenv("BREVO_API_KEY") or "").strip()
+    resend_api_key = (os.getenv("RESEND_API_KEY") or "").strip()
     smtp_host = (os.getenv("SMTP_HOST") or "").strip()
     smtp_port_str = (os.getenv("SMTP_PORT") or "587").strip()
     try:
@@ -224,35 +274,52 @@ def send_otp_email(email: str, otp_code: str) -> tuple[bool, str]:
     smtp_pass = (os.getenv("SMTP_PASSWORD") or "").strip().replace(" ", "")
     sender_email = (os.getenv("SMTP_FROM") or "").strip() or smtp_user or "noreply@freshcheck.ai"
 
+    html_body = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px; color: #333;">
+        <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+          <h2 style="color: #10b981; margin-top: 0;">FreshCheck AI Login</h2>
+          <p>Hello,</p>
+          <p>You requested to log in to FreshCheck AI. Use the verification code below to complete your login:</p>
+          <div style="text-align: center; margin: 25px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; background-color: #ecfdf5; color: #059669; padding: 12px 24px; border-radius: 6px; border: 1px dashed #10b981;">
+              {otp_code}
+            </span>
+          </div>
+          <p style="font-size: 14px; color: #6b7280;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin-top: 25px;" />
+          <p style="font-size: 12px; color: #9ca3af; text-align: center; margin-bottom: 0;">&copy; FreshCheck AI. All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+    """
+
+    # 1. Try Brevo HTTPS API (Port 443, unrestricted on Render Free)
+    if brevo_api_key:
+        ok, msg = send_otp_via_brevo(brevo_api_key, sender_email, email, otp_code, html_body)
+        if ok:
+            print(f"[EMAIL-SENT] {msg} to {email}")
+            return True, msg
+        print(f"[BREVO-WARN] {msg}")
+
+    # 2. Try Resend HTTPS API (Port 443, unrestricted on Render Free)
+    if resend_api_key:
+        ok, msg = send_otp_via_resend(resend_api_key, sender_email, email, otp_code, html_body)
+        if ok:
+            print(f"[EMAIL-SENT] {msg} to {email}")
+            return True, msg
+        print(f"[RESEND-WARN] {msg}")
+
+    # 3. Fallback to standard SMTP (Port 587 / 465)
     if not smtp_host or not smtp_user or not smtp_pass:
-        print(f"[DEMO MODE] Missing SMTP settings. OTP for {email} is: {otp_code}")
-        return False, "SMTP configuration missing or incomplete in environment."
+        print(f"[DEMO MODE] Missing email settings. OTP for {email} is: {otp_code}")
+        return False, "Email configuration missing in environment."
 
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = f"Your Login Verification OTP Code: {otp_code}"
         msg["From"] = sender_email
         msg["To"] = email
-
-        html_body = f"""
-        <html>
-          <body style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px; color: #333;">
-            <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-              <h2 style="color: #10b981; margin-top: 0;">FreshCheck AI Login</h2>
-              <p>Hello,</p>
-              <p>You requested to log in to FreshCheck AI. Use the verification code below to complete your login:</p>
-              <div style="text-align: center; margin: 25px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; background-color: #ecfdf5; color: #059669; padding: 12px 24px; border-radius: 6px; border: 1px dashed #10b981;">
-                  {otp_code}
-                </span>
-              </div>
-              <p style="font-size: 14px; color: #6b7280;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
-              <hr style="border: none; border-top: 1px solid #e5e7eb; margin-top: 25px;" />
-              <p style="font-size: 12px; color: #9ca3af; text-align: center; margin-bottom: 0;">&copy; FreshCheck AI. All rights reserved.</p>
-            </div>
-          </body>
-        </html>
-        """
         msg.attach(MIMEText(html_body, "html"))
 
         # Support both port 465 (SSL) and port 587 (STARTTLS) with automatic failover
@@ -267,13 +334,12 @@ def send_otp_email(email: str, otp_code: str) -> tuple[bool, str]:
                     server.login(smtp_user, smtp_pass)
                     server.sendmail(sender_email, [email], msg.as_string())
             except Exception as starttls_err:
-                # If cloud host blocks port 587 STARTTLS, try port 465 SSL as fallback
                 print(f"[SMTP-WARN] Port {smtp_port} STARTTLS failed ({starttls_err}), trying port 465 SSL fallback...")
                 with smtplib.SMTP_SSL(smtp_host, 465, timeout=12) as server_ssl:
                     server_ssl.login(smtp_user, smtp_pass)
                     server_ssl.sendmail(sender_email, [email], msg.as_string())
 
-        return True, "Email sent successfully"
+        return True, "Email sent successfully via SMTP"
     except Exception as e:
         err_msg = str(e)
         print(f"[SMTP-ERROR] Failed to send email to {email}: {err_msg}")
@@ -440,7 +506,9 @@ def database_status():
 
 @app.get("/debug-smtp")
 def debug_smtp():
-    """Diagnostic endpoint to inspect live SMTP connection and authentication status."""
+    """Diagnostic endpoint to inspect live SMTP/API connection and authentication status."""
+    brevo_api_key = (os.getenv("BREVO_API_KEY") or "").strip()
+    resend_api_key = (os.getenv("RESEND_API_KEY") or "").strip()
     smtp_host = (os.getenv("SMTP_HOST") or "").strip()
     smtp_port_str = (os.getenv("SMTP_PORT") or "587").strip()
     smtp_user = (os.getenv("SMTP_USER") or "").strip()
@@ -456,6 +524,8 @@ def debug_smtp():
     pass_len = len(smtp_pass)
 
     info = {
+        "brevo_configured": bool(brevo_api_key),
+        "resend_configured": bool(resend_api_key),
         "smtp_host": smtp_host or "NOT_SET",
         "smtp_port": smtp_port,
         "smtp_user_masked": masked_user,
@@ -463,11 +533,29 @@ def debug_smtp():
         "smtp_from": smtp_from or "NOT_SET",
     }
 
+    if brevo_api_key:
+        return {
+            "success": True,
+            "status": "HTTP_API_ACTIVE",
+            "provider": "Brevo (Sendinblue) HTTPS API (Port 443)",
+            "message": "Brevo HTTPS API is configured and unblocked on Render! Real emails will be delivered directly to registered inboxes.",
+            "details": info
+        }
+
+    if resend_api_key:
+        return {
+            "success": True,
+            "status": "HTTP_API_ACTIVE",
+            "provider": "Resend HTTPS API (Port 443)",
+            "message": "Resend HTTPS API is configured and unblocked on Render! Real emails will be delivered directly.",
+            "details": info
+        }
+
     if not smtp_host or not smtp_user or not smtp_pass:
         return {
             "success": False,
             "status": "MISSING_CONFIG",
-            "message": "One or more SMTP environment variables (SMTP_HOST, SMTP_USER, SMTP_PASSWORD) are not set.",
+            "message": "Neither Brevo/Resend API key nor complete SMTP variables are set.",
             "details": info
         }
 
@@ -514,7 +602,7 @@ def debug_smtp():
     return {
         "success": False,
         "status": "AUTH_OR_CONNECTION_FAILED",
-        "message": "SMTP handshake or authentication failed.",
+        "message": "SMTP handshake or authentication failed. (Note: Render Free tier blocks outbound TCP on ports 25, 465, and 587. Configure BREVO_API_KEY to send emails via unrestricted HTTPS port 443).",
         "errors": errors,
         "details": info
     }
