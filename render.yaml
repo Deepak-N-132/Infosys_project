@@ -44,7 +44,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: freshcheck-backend
-          property: host
+        value: "https://freshcheck-backend.onrender.com"

@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
-const rawApiUrl = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL.trim() : "http://127.0.0.1:8000";
+let rawApiUrl = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL.trim() : "";
+if (!rawApiUrl || rawApiUrl === "freshcheck-backend" || (rawApiUrl.includes("freshcheck-backend") && !rawApiUrl.includes("."))) {
+  if (typeof window !== "undefined" && window.location.hostname.includes("onrender.com")) {
+    rawApiUrl = "https://freshcheck-backend.onrender.com";
+  } else {
+    rawApiUrl = "http://127.0.0.1:8000";
+  }
+}
 const API_URL = (rawApiUrl.startsWith("http://") || rawApiUrl.startsWith("https://"))
   ? rawApiUrl.replace(/\/+$/, "")
   : `https://${rawApiUrl}`.replace(/\/+$/, "");
