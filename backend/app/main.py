@@ -212,16 +212,21 @@ class SaveApiKeyRequest(BaseModel):
     gemini_api_key: Optional[str] = None
 
 
-def send_otp_email(email: str, otp_code: str) -> bool:
-    smtp_host = os.getenv("SMTP_HOST", "")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_pass = os.getenv("SMTP_PASSWORD", "")
-    sender_email = os.getenv("SMTP_FROM", smtp_user or "noreply@freshcheck.ai")
+def send_otp_email(email: str, otp_code: str) -> tuple[bool, str]:
+    smtp_host = (os.getenv("SMTP_HOST") or "").strip()
+    smtp_port_str = (os.getenv("SMTP_PORT") or "587").strip()
+    try:
+        smtp_port = int(smtp_port_str)
+    except ValueError:
+        smtp_port = 587
+    smtp_user = (os.getenv("SMTP_USER") or "").strip()
+    # Strip any accidental spaces from Google 16-character App Password
+    smtp_pass = (os.getenv("SMTP_PASSWORD") or "").strip().replace(" ", "")
+    sender_email = (os.getenv("SMTP_FROM") or "").strip() or smtp_user or "noreply@freshcheck.ai"
 
     if not smtp_host or not smtp_user or not smtp_pass:
-        print(f"[DEMO MODE] OTP for {email} is: {otp_code}")
-        return False
+        print(f"[DEMO MODE] Missing SMTP settings. OTP for {email} is: {otp_code}")
+        return False, "SMTP configuration missing or incomplete in environment."
 
     try:
         msg = MIMEMultipart("alternative")
@@ -250,15 +255,35 @@ def send_otp_email(email: str, otp_code: str) -> bool:
         """
         msg.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(sender_email, [email], msg.as_string())
-        return True
+        # Support both port 465 (SSL) and port 587 (STARTTLS) with automatic failover
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=12) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(sender_email, [email], msg.as_string())
+        else:
+            try:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=12) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.sendmail(sender_email, [email], msg.as_string())
+            except Exception as starttls_err:
+                # If cloud host blocks port 587 STARTTLS, try port 465 SSL as fallback
+                print(f"[SMTP-WARN] Port {smtp_port} STARTTLS failed ({starttls_err}), trying port 465 SSL fallback...")
+                with smtplib.SMTP_SSL(smtp_host, 465, timeout=12) as server_ssl:
+                    server_ssl.login(smtp_user, smtp_pass)
+                    server_ssl.sendmail(sender_email, [email], msg.as_string())
+
+        return True, "Email sent successfully"
     except Exception as e:
-        print(f"Failed to send email to {email}: {e}")
+        err_msg = str(e)
+        print(f"[SMTP-ERROR] Failed to send email to {email}: {err_msg}")
         print(f"[DEMO FALLBACK] OTP for {email} is: {otp_code}")
-        return False
+        try:
+            import sentry_sdk
+            sentry_sdk.capture_exception(e)
+        except Exception:
+            pass
+        return False, err_msg
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -410,6 +435,88 @@ def database_status():
     return {
         "success": True,
         "db": get_db_info()
+    }
+
+
+@app.get("/debug-smtp")
+def debug_smtp():
+    """Diagnostic endpoint to inspect live SMTP connection and authentication status."""
+    smtp_host = (os.getenv("SMTP_HOST") or "").strip()
+    smtp_port_str = (os.getenv("SMTP_PORT") or "587").strip()
+    smtp_user = (os.getenv("SMTP_USER") or "").strip()
+    smtp_pass = (os.getenv("SMTP_PASSWORD") or "").strip().replace(" ", "")
+    smtp_from = (os.getenv("SMTP_FROM") or "").strip()
+
+    try:
+        smtp_port = int(smtp_port_str)
+    except ValueError:
+        smtp_port = 587
+
+    masked_user = (smtp_user[:3] + "***" + smtp_user[smtp_user.find("@"):]) if "@" in smtp_user else (smtp_user[:2] + "***" if smtp_user else "NOT_SET")
+    pass_len = len(smtp_pass)
+
+    info = {
+        "smtp_host": smtp_host or "NOT_SET",
+        "smtp_port": smtp_port,
+        "smtp_user_masked": masked_user,
+        "smtp_pass_length": pass_len,
+        "smtp_from": smtp_from or "NOT_SET",
+    }
+
+    if not smtp_host or not smtp_user or not smtp_pass:
+        return {
+            "success": False,
+            "status": "MISSING_CONFIG",
+            "message": "One or more SMTP environment variables (SMTP_HOST, SMTP_USER, SMTP_PASSWORD) are not set.",
+            "details": info
+        }
+
+    errors = []
+    try:
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as s:
+                s.login(smtp_user, smtp_pass)
+                return {
+                    "success": True,
+                    "status": "AUTHENTICATED",
+                    "mode": f"SSL on port {smtp_port}",
+                    "message": "Successfully connected and authenticated with SMTP server!",
+                    "details": info
+                }
+        else:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as s:
+                s.starttls()
+                s.login(smtp_user, smtp_pass)
+                return {
+                    "success": True,
+                    "status": "AUTHENTICATED",
+                    "mode": f"STARTTLS on port {smtp_port}",
+                    "message": "Successfully connected and authenticated with SMTP server!",
+                    "details": info
+                }
+    except Exception as e:
+        errors.append(f"Port {smtp_port} attempt: {type(e).__name__}: {e}")
+
+    if smtp_port != 465:
+        try:
+            with smtplib.SMTP_SSL(smtp_host, 465, timeout=10) as s:
+                s.login(smtp_user, smtp_pass)
+                return {
+                    "success": True,
+                    "status": "AUTHENTICATED",
+                    "mode": "SSL on port 465 (fallback)",
+                    "message": "Successfully authenticated via port 465 SSL fallback!",
+                    "details": info
+                }
+        except Exception as e:
+            errors.append(f"Port 465 fallback attempt: {type(e).__name__}: {e}")
+
+    return {
+        "success": False,
+        "status": "AUTH_OR_CONNECTION_FAILED",
+        "message": "SMTP handshake or authentication failed.",
+        "errors": errors,
+        "details": info
     }
 
 
@@ -1912,7 +2019,7 @@ def login_user(login_data: UserLogin):
         otp_code = f"{secrets.randbelow(900000) + 100000}"
         OTPRecord.save_otp(user.email, otp_code, expires_in_seconds=300)
 
-        sent_email = send_otp_email(user.email, otp_code)
+        sent_email, email_error = send_otp_email(user.email, otp_code)
 
         res = {
             "status": "otp_required",
@@ -1922,6 +2029,7 @@ def login_user(login_data: UserLogin):
         }
         if not sent_email:
             res["demo_otp"] = otp_code
+            res["smtp_notice"] = email_error
         return res
     except HTTPException:
         raise
@@ -2006,7 +2114,7 @@ def resend_otp(resend_data: ResendOTPRequest):
         otp_code = f"{secrets.randbelow(900000) + 100000}"
         OTPRecord.save_otp(user.email, otp_code, expires_in_seconds=300)
 
-        sent_email = send_otp_email(user.email, otp_code)
+        sent_email, email_error = send_otp_email(user.email, otp_code)
 
         res = {
             "success": True,
@@ -2015,6 +2123,7 @@ def resend_otp(resend_data: ResendOTPRequest):
         }
         if not sent_email:
             res["demo_otp"] = otp_code
+            res["smtp_notice"] = email_error
         return res
     except HTTPException:
         raise
