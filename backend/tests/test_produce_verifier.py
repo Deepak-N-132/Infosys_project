@@ -4,7 +4,7 @@ from unittest.mock import patch
 from io import BytesIO
 from PIL import Image
 
-from backend.app.produce_verifier import (
+from app.produce_verifier import (
     verify_produce_domain,
     match_supported_produce,
     compute_normalized_entropy,
@@ -49,7 +49,7 @@ def test_gemini_vision_rejects_cake():
         "reason": "Chocolate frosted layered cake slice."
     }
 
-    with patch("backend.app.produce_verifier.verify_produce_with_gemini", return_value=mock_gemini_resp):
+    with patch("app.produce_verifier.verify_produce_with_gemini", return_value=mock_gemini_resp):
         res = verify_produce_domain("dummy_cake.jpg")
         assert res["is_valid_produce"] is False
         assert res["is_supported"] is False
@@ -71,7 +71,7 @@ def test_gemini_vision_accepts_valid_produce():
         "reason": "Fresh yellow banana cluster."
     }
 
-    with patch("backend.app.produce_verifier.verify_produce_with_gemini", return_value=mock_gemini_resp):
+    with patch("app.produce_verifier.verify_produce_with_gemini", return_value=mock_gemini_resp):
         res = verify_produce_domain("dummy_banana.jpg")
         assert res["is_valid_produce"] is True
         assert res["is_supported"] is True
@@ -93,7 +93,7 @@ def test_gemini_vision_identifies_unsupported_produce():
         "reason": "Red apple fruit."
     }
 
-    with patch("backend.app.produce_verifier.verify_produce_with_gemini", return_value=mock_gemini_resp):
+    with patch("app.produce_verifier.verify_produce_with_gemini", return_value=mock_gemini_resp):
         res = verify_produce_domain("dummy_apple.jpg")
         assert res["is_valid_produce"] is True
         assert res["is_supported"] is False
@@ -103,7 +103,7 @@ def test_gemini_vision_identifies_unsupported_produce():
 
 def test_offline_entropy_fallback_rejects_diffused_predictions():
     """Verifies that when Gemini is offline, highly diffused Softmax distributions are flagged as OOD."""
-    with patch("backend.app.produce_verifier.verify_produce_with_gemini", return_value=None):
+    with patch("app.produce_verifier.verify_produce_with_gemini", return_value=None):
         diffused_preds = np.full(24, 1.0 / 24.0)
         res = verify_produce_domain("dummy.jpg", predictions=diffused_preds)
         assert res["is_valid_produce"] is False
@@ -113,7 +113,7 @@ def test_offline_entropy_fallback_rejects_diffused_predictions():
 
 def test_offline_color_consistency_fallback_flags_bittermelon_anomaly():
     """Verifies that when Bittermelon is predicted on non-green, high-brightness imagery, it is rejected."""
-    with patch("backend.app.produce_verifier.verify_produce_with_gemini", return_value=None):
+    with patch("app.produce_verifier.verify_produce_with_gemini", return_value=None):
         # Image has low green (8%) and high red/pastel brightness (225)
         color_dist = {
             "green_percent": 8.0,
