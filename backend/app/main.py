@@ -630,7 +630,8 @@ def debug_smtp(test_email: Optional[str] = None):
 @app.get("/sentry-debug")
 async def trigger_sentry_error():
     """Diagnostic route to test Sentry error monitoring and AI Autofix."""
-    division_by_zero = 1 / 0
+    zero_val = 0
+    division_by_zero = 1 / zero_val
     return {"result": division_by_zero}
 
 
@@ -1807,7 +1808,7 @@ def get_executive_compliance_audit_report(
         history_scans = Prediction.find_all() if is_admin else Prediction.find_by_user(current_user.id or "")
 
         all_users = User.find_all()
-        user_map = {str(u.id): {"name": u.name, "email": u.email, "role": u.role} for u in all_users if u.id}
+        user_map = {u.id: {"name": u.name, "email": u.email, "role": u.role} for u in all_users if u.id}
 
         dict_items = []
         for i in raw_items:
@@ -1888,7 +1889,7 @@ def export_executive_data(
         history_scans = Prediction.find_all() if is_admin else Prediction.find_by_user(current_user.id or "")
 
         all_users = User.find_all()
-        user_map = {str(u.id): {"name": u.name, "email": u.email, "role": u.role} for u in all_users if u.id}
+        user_map = {u.id: {"name": u.name, "email": u.email, "role": u.role} for u in all_users if u.id}
 
         dict_items = []
         for i in raw_items:
