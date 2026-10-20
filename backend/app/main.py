@@ -66,6 +66,10 @@ from .storage_chatbot import (
     test_gemini_api_key,
     detect_food_item
 )
+from .produce_verifier import (
+    verify_produce_domain,
+    SUPPORTED_PRODUCE
+)
 
 # ============================================================
 # CONFIG
@@ -585,6 +589,49 @@ async def predict_food(
         # IMAGE ANALYSIS & FEATURE EXTRACTION (MILESTONE 2)
         # ----------------------------------------------------
         visual_features = analyze_image_features(file_path)
+
+        # ----------------------------------------------------
+        # PRODUCE DOMAIN VERIFICATION & OOD REJECTION
+        # Guards against misclassifying non-produce (cake, pastry,
+        # pizza, cooked meals, non-food) as bittermelon or other produce.
+        # ----------------------------------------------------
+        domain_check = verify_produce_domain(
+            file_path=file_path,
+            predictions=predictions[0],
+            predicted_food=str(food),
+            color_distribution=visual_features.get("color_distribution")
+        )
+
+        if not domain_check["is_valid_produce"] or not domain_check["is_supported"]:
+            try:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception:
+                pass
+
+            rejection_detail = domain_check.get("rejection_message") or (
+                "Unsupported item detected. FreshCheck AI is specialized for agricultural fruits and vegetables."
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=rejection_detail
+            )
+
+        # Cross-verification: If Gemini Vision verified a supported produce item
+        # that differs from raw CNN top-1 logit, align prediction to the verified produce item
+        verified_item = domain_check.get("matched_produce")
+        if verified_item and verified_item != food:
+            subset_mapping = mapping[mapping["food"] == verified_item]
+            if len(subset_mapping) > 0:
+                sub_ids = subset_mapping["class_id"].tolist()
+                best_sub_id = max(sub_ids, key=lambda cid: predictions[0][cid])
+                class_id = best_sub_id
+                result = mapping[mapping["class_id"] == class_id].iloc[0]
+                food = result["food"]
+                freshness = result["freshness"]
+                min_days = int(result["min_days"])
+                max_days = int(result["max_days"])
+                confidence = float(predictions[0][class_id]) * 100
 
         # ----------------------------------------------------
         # FOOD QUALITY SCORING (MILESTONE 2)
