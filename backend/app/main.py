@@ -346,13 +346,14 @@ app = FastAPI(
 
 ALLOWED_ORIGINS = [
     o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost,http://127.0.0.1:5173,http://127.0.0.1,http://frontend:80").split(",")
     if o.strip()
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|.*\.onrender\.com)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -835,14 +836,20 @@ def generate_freshness_report(
 # SPOILAGE ALERTS DASHBOARD (MILESTONE 2)
 # ============================================================
 
+ORGANIZATIONAL_ROLES = {
+    "Administrator", "Admin", "Enterprise Manager",
+    "Food Quality Inspector", "Warehouse Operator", "Retail Manager"
+}
+
 @app.get("/spoilage-alerts")
 def get_spoilage_alerts(
     current_user: User = Depends(get_current_user)
 ):
     try:
+        is_elevated = getattr(current_user, "role", "Consumer") in ORGANIZATIONAL_ROLES
         # Synchronizes live hazards into MongoDB collection and returns active alerts
-        alerts = SpoilageAlert.sync_for_user(current_user.id or "")
-        active_inventory = Inventory.find_by_user(current_user.id or "")
+        alerts = SpoilageAlert.sync_for_user(current_user.id or "", is_all=is_elevated)
+        active_inventory = Inventory.find_all() if is_elevated else Inventory.find_by_user(current_user.id or "")
 
         formatted_alerts = [
             {
@@ -889,7 +896,8 @@ def take_spoilage_action(
 ):
     try:
         alert = SpoilageAlert.find_by_id(alert_id)
-        if not alert or alert.user_id != current_user.id:
+        is_elevated = getattr(current_user, "role", "Consumer") in ORGANIZATIONAL_ROLES
+        if not alert or (alert.user_id != current_user.id and not is_elevated):
             raise HTTPException(status_code=404, detail="Spoilage alert record not found")
 
         action = action_req.action.lower()
@@ -938,7 +946,8 @@ def take_spoilage_action(
 @app.get("/inventory")
 def get_inventory(current_user: User = Depends(get_current_user)):
     try:
-        records = Inventory.find_by_user(current_user.id or "")
+        is_elevated = getattr(current_user, "role", "Consumer") in ORGANIZATIONAL_ROLES
+        records = Inventory.find_all() if is_elevated else Inventory.find_by_user(current_user.id or "")
         return {
             "success": True,
             "count": len(records),
@@ -1011,14 +1020,15 @@ def update_inventory_item(
         if not updates:
             raise HTTPException(status_code=400, detail="No fields provided for update.")
 
-        success = Inventory.update_item(item_id, user_id=current_user.id, **updates)
+        is_elevated = getattr(current_user, "role", "Consumer") in ORGANIZATIONAL_ROLES
+        success = Inventory.update_item(item_id, user_id=None if is_elevated else current_user.id, **updates)
         if not success:
             raise HTTPException(status_code=404, detail="Inventory item not found or unauthorized.")
 
         # Re-sync live hazard alerts if status or storage changed
         if "status" in updates or "storage" in updates:
             try:
-                SpoilageAlert.sync_for_user(current_user.id or "")
+                SpoilageAlert.sync_for_user(current_user.id or "", is_all=is_elevated)
             except Exception:
                 pass
 
@@ -1052,7 +1062,8 @@ def delete_inventory_item(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        success = Inventory.delete(item_id, user_id=current_user.id)
+        is_elevated = getattr(current_user, "role", "Consumer") in ORGANIZATIONAL_ROLES
+        success = Inventory.delete(item_id, user_id=None if is_elevated else current_user.id)
         if not success:
             raise HTTPException(
                 status_code=404,
@@ -1431,7 +1442,8 @@ def get_inventory_recommendations(
 ):
     """Generates complete FEFO priority queue, retail markdowns, culinary repurposing, and ethylene alerts."""
     try:
-        raw_items = Inventory.find_by_user(current_user.id or "")
+        is_elevated = getattr(current_user, "role", "Consumer") in ORGANIZATIONAL_ROLES
+        raw_items = Inventory.find_all() if is_elevated else Inventory.find_by_user(current_user.id or "")
         dict_items = [
             {
                 "id": str(i.id),
@@ -1460,7 +1472,8 @@ def get_inventory_freshness_insights(
 ):
     """Computes global inventory health score, waste risk exposure, financial impact, and category metrics."""
     try:
-        raw_items = Inventory.find_by_user(current_user.id or "")
+        is_elevated = getattr(current_user, "role", "Consumer") in ORGANIZATIONAL_ROLES
+        raw_items = Inventory.find_all() if is_elevated else Inventory.find_by_user(current_user.id or "")
         dict_items = [
             {
                 "id": str(i.id),
@@ -1473,7 +1486,7 @@ def get_inventory_freshness_insights(
             }
             for i in raw_items
         ]
-        history_scans = Prediction.find_by_user(current_user.id or "")
+        history_scans = Prediction.find_all() if is_elevated else Prediction.find_by_user(current_user.id or "")
         insights = compute_inventory_insights(dict_items, history_scans)
         return insights
     except Exception as e:
@@ -1492,7 +1505,7 @@ def get_executive_summary(
 ):
     """Computes executive-level KPIs: protected capital value, CO2 offset, loss mitigation rate, and compliance."""
     try:
-        is_admin = getattr(current_user, "role", "") == "Administrator"
+        is_admin = getattr(current_user, "role", "") in {"Administrator", "Admin", "Enterprise Manager"}
         raw_items = Inventory.find_all() if is_admin else Inventory.find_by_user(current_user.id or "")
         dict_items = [
             {
@@ -1521,7 +1534,7 @@ def get_analytics_trends(
 ):
     """Returns multi-day time-series trajectory of quality scores, compliance rates, and financial savings."""
     try:
-        is_admin = getattr(current_user, "role", "") == "Administrator"
+        is_admin = getattr(current_user, "role", "") in {"Administrator", "Admin", "Enterprise Manager"}
         raw_items = Inventory.find_all() if is_admin else Inventory.find_by_user(current_user.id or "")
         dict_items = [
             {
@@ -1553,7 +1566,7 @@ def get_executive_compliance_audit_report(
 ):
     """Generates formal ISO / HACCP-aligned digital audit compliance certificate and batch records."""
     try:
-        is_admin = getattr(current_user, "role", "") == "Administrator"
+        is_admin = getattr(current_user, "role", "") in {"Administrator", "Admin", "Enterprise Manager", "Food Quality Inspector"}
         raw_items = Inventory.find_all() if is_admin else Inventory.find_by_user(current_user.id or "")
         history_scans = Prediction.find_all() if is_admin else Prediction.find_by_user(current_user.id or "")
 
@@ -1634,7 +1647,7 @@ def export_executive_data(
 ):
     """Exports structured batch compliance data in JSON or downloadable CSV format."""
     try:
-        is_admin = getattr(current_user, "role", "") == "Administrator"
+        is_admin = getattr(current_user, "role", "") in {"Administrator", "Admin", "Enterprise Manager", "Food Quality Inspector"}
         raw_items = Inventory.find_all() if is_admin else Inventory.find_by_user(current_user.id or "")
         history_scans = Prediction.find_all() if is_admin else Prediction.find_by_user(current_user.id or "")
 
@@ -2089,8 +2102,8 @@ def get_chat_advisor_status():
         "configured": has_gemini,
         "gemini_configured": has_gemini,
         "has_key": bool(get_gemini_api_key()),
-        "model": "gemini-2.5-flash" if has_gemini else "FoodScience-Offline-Engine",
-        "active_model": "gemini-2.5-flash" if has_gemini else "FoodScience-Offline-Engine",
+        "model": "gemini-3-flash-preview" if has_gemini else "FoodScience-Offline-Engine",
+        "active_model": "gemini-3-flash-preview" if has_gemini else "FoodScience-Offline-Engine",
         "sample_prompts": [
             "How do I store bananas to prevent premature browning?",
             "What is the best technique to keep leafy greens and spinach crisp?",
@@ -2174,7 +2187,7 @@ def save_gemini_api_key_endpoint(request: SaveApiKeyRequest):
         "message": f"Gemini API key successfully saved ({masked})! AI Storage Advisor is now active.",
         "configured": True,
         "masked_key": masked,
-        "model": "gemini-2.5-flash"
+        "model": "gemini-3-flash-preview"
     }
 
 

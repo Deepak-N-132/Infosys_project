@@ -124,7 +124,7 @@ def compute_executive_summary(
     fqi_trajectory = []
     if len(sorted_scans) >= 5:
         step = (len(sorted_scans) - 1) / 4.0
-        sample_indices = [int(round(i * step)) for i in range(5)]
+        sample_indices = [round(i * step) for i in range(5)]
         sample_indices[-1] = len(sorted_scans) - 1
 
         for idx_pos, s_idx in enumerate(sample_indices):
@@ -185,7 +185,7 @@ def compute_executive_summary(
 
     if total_inv_count > 0:
         for stage_idx in range(5):
-            cutoff = max(1, int(round(((stage_idx + 1) / 5.0) * total_inv_count)))
+            cutoff = max(1, round(((stage_idx + 1) / 5.0) * total_inv_count))
             stage_items = sorted_items[:cutoff]
             stage_prime = sum(1 for it in stage_items if "rotten" not in str(it.get("status", "")).lower() and "near" not in str(it.get("status", "")).lower())
             stage_at_risk = sum(1 for it in stage_items if "near" in str(it.get("status", "")).lower())

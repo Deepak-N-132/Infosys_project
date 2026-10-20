@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
-
-const API_URL = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL : "http://127.0.0.1:8000";
+const rawApiUrl = (import.meta.env && import.meta.env.VITE_API_URL) ? import.meta.env.VITE_API_URL.trim() : "http://127.0.0.1:8000";
+const API_URL = (rawApiUrl.startsWith("http://") || rawApiUrl.startsWith("https://"))
+  ? rawApiUrl.replace(/\/+$/, "")
+  : `https://${rawApiUrl}`.replace(/\/+$/, "");
 
 const EyeIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -411,14 +413,14 @@ const ROLE_DASHBOARDS = {
     allowedTabs: ["scanner", "inventory", "register_food", "spoilage", "shelf_life", "recommendations", "storage_advisor", "reports", "analytics"],
     restrictedTabs: ["executive", "storage_monitoring", "storage_compliance", "users"],
     navItems: [
-      { id: "scanner", icon: "🔍", label: "Scan Food (AI Scanner)" },
-      { id: "inventory", icon: "📦", label: "Manage Personal Items" },
-      { id: "register_food", icon: "➕", label: "Register New Produce" },
+      { id: "scanner", icon: "🔍", label: "Produce Scanner" },
+      { id: "inventory", icon: "📦", label: "Personal Inventory" },
+      { id: "register_food", icon: "➕", label: "Register Produce" },
       { id: "spoilage", icon: "⚠️", label: "Freshness Warnings", hasBadge: true },
-      { id: "shelf_life", icon: "🧠", label: "Shelf-Life Guidance", chip: "Household" },
+      { id: "shelf_life", icon: "🧠", label: "Shelf-Life Guidance", chip: "Guide" },
       { id: "recommendations", icon: "💡", label: "Storage Tips & Hacks" },
       { id: "storage_advisor", icon: "🤖", label: "Storage Advisor AI" },
-      { id: "reports", icon: "📜", label: "Personal Freshness Audit" }
+      { id: "reports", icon: "📜", label: "Freshness Audit Ledger" }
     ]
   },
   "Retail Manager": {
@@ -431,13 +433,13 @@ const ROLE_DASHBOARDS = {
     allowedTabs: ["inventory", "recommendations", "spoilage", "analytics", "reports", "scanner", "register_food", "storage_advisor"],
     restrictedTabs: ["executive", "storage_monitoring", "storage_compliance", "users"],
     navItems: [
-      { id: "inventory", icon: "📦", label: "Stock Inventory & Status", chip: "Record Sales" },
-      { id: "recommendations", icon: "💡", label: "Review Stock Risks & FEFO" },
+      { id: "inventory", icon: "📦", label: "Store Inventory", chip: "Sales" },
+      { id: "recommendations", icon: "💡", label: "Stock Risks & FEFO" },
       { id: "spoilage", icon: "⚠️", label: "Stock Risk Radar", hasBadge: true },
-      { id: "analytics", icon: "📊", label: "Store Freshness Analytics" },
+      { id: "analytics", icon: "📊", label: "Store Analytics" },
       { id: "reports", icon: "📜", label: "Store Audit Reports" },
-      { id: "scanner", icon: "🔍", label: "Produce Quality Scanner" },
-      { id: "register_food", icon: "➕", label: "Register Store Stock" },
+      { id: "scanner", icon: "🔍", label: "Quality Scanner" },
+      { id: "register_food", icon: "➕", label: "Register Stock" },
       { id: "storage_advisor", icon: "🤖", label: "Storage Advisor AI" }
     ]
   },
@@ -451,11 +453,11 @@ const ROLE_DASHBOARDS = {
     allowedTabs: ["storage_monitoring", "spoilage", "shelf_life", "storage_compliance", "inventory", "register_food", "recommendations", "scanner", "reports", "storage_advisor"],
     restrictedTabs: ["executive", "users"],
     navItems: [
-      { id: "storage_monitoring", icon: "🌡️", label: "Review Storage Readings", chip: "Live Readings" },
+      { id: "storage_monitoring", icon: "🌡️", label: "Storage Readings", chip: "Live" },
       { id: "spoilage", icon: "⚠️", label: "Compliance Alerts", hasBadge: true },
-      { id: "shelf_life", icon: "🧠", label: "Stock Actions: Shelf-Life Control", chip: "Operator Control" },
+      { id: "shelf_life", icon: "🧠", label: "Shelf-Life Control", chip: "Operator" },
       { id: "storage_compliance", icon: "❄️", label: "Cold-Chain Settings" },
-      { id: "inventory", icon: "📦", label: "Stock Actions: Inventory" },
+      { id: "inventory", icon: "📦", label: "Stock Inventory" },
       { id: "register_food", icon: "➕", label: "Register Batch" },
       { id: "recommendations", icon: "💡", label: "FEFO Dispatch Sequence" },
       { id: "scanner", icon: "🔍", label: "Batch Quality Scanner" },
@@ -473,11 +475,11 @@ const ROLE_DASHBOARDS = {
     allowedTabs: ["scanner", "shelf_life", "spoilage", "reports", "analytics", "inventory", "storage_advisor"],
     restrictedTabs: ["executive", "storage_compliance", "users"],
     navItems: [
-      { id: "scanner", icon: "🔍", label: "Inspect Food (AI Scanner)" },
-      { id: "shelf_life", icon: "🧠", label: "Review Analysis: Shelf-Life" },
-      { id: "spoilage", icon: "⚠️", label: "Review Analysis: Spoilage", hasBadge: true },
-      { id: "reports", icon: "📜", label: "Produce Reports: Certificates" },
-      { id: "analytics", icon: "📊", label: "Review Analysis: Analytics" },
+      { id: "scanner", icon: "🔍", label: "Produce Scanner" },
+      { id: "shelf_life", icon: "🧠", label: "Shelf-Life Analysis" },
+      { id: "spoilage", icon: "⚠️", label: "Spoilage Risk Radar", hasBadge: true },
+      { id: "reports", icon: "📜", label: "Quality Certificates" },
+      { id: "analytics", icon: "📊", label: "Freshness Analytics" },
       { id: "inventory", icon: "📦", label: "Inspected Batches" },
       { id: "storage_advisor", icon: "🤖", label: "Storage Advisor AI" }
     ]
@@ -493,10 +495,10 @@ const ROLE_DASHBOARDS = {
     restrictedTabs: ["register_food", "storage_compliance", "users"],
     navItems: [
       { id: "executive", icon: "📊", label: "Executive Dashboard" },
-      { id: "reports", icon: "📜", label: "Audit & Compliance Reports" },
+      { id: "reports", icon: "📜", label: "Compliance Reports" },
       { id: "analytics", icon: "📊", label: "Freshness Analytics" },
       { id: "inventory", icon: "📦", label: "Global Inventory" },
-      { id: "recommendations", icon: "💡", label: "FEFO & Markdown Priorities" },
+      { id: "recommendations", icon: "💡", label: "FEFO Priorities" },
       { id: "storage_monitoring", icon: "🌡️", label: "Storage Telemetry" },
       { id: "shelf_life", icon: "🧠", label: "Shelf-Life Simulator" },
       { id: "spoilage", icon: "⚠️", label: "Critical Risk Radar", hasBadge: true },
@@ -513,13 +515,13 @@ const ROLE_DASHBOARDS = {
     allowedTabs: ["executive", "users", "reports", "scanner", "analytics", "shelf_life", "storage_monitoring", "recommendations", "spoilage", "inventory", "register_food", "storage_compliance", "storage_advisor"],
     restrictedTabs: [],
     navItems: [
-      { id: "executive", icon: "📊", label: "Review Platform-Level Info" },
-      { id: "users", icon: "👥", label: "Manage Platform Users", chip: "Admin" },
+      { id: "executive", icon: "📊", label: "Platform Overview" },
+      { id: "users", icon: "👥", label: "User Management", chip: "Admin" },
       { id: "reports", icon: "📜", label: "Platform Audit Reports" },
       { id: "scanner", icon: "🔍", label: "Freshness Scanner" },
       { id: "analytics", icon: "📊", label: "Freshness Analytics" },
-      { id: "shelf_life", icon: "🧠", label: "Shelf-Life Engine", chip: "Full Admin" },
-      { id: "storage_monitoring", icon: "🌡️", label: "Storage Workflows" },
+      { id: "shelf_life", icon: "🧠", label: "Shelf-Life Engine", chip: "Admin" },
+      { id: "storage_monitoring", icon: "🌡️", label: "Storage Telemetry" },
       { id: "recommendations", icon: "💡", label: "Recommendations & FEFO" },
       { id: "spoilage", icon: "⚠️", label: "Spoilage Alerts", hasBadge: true },
       { id: "inventory", icon: "📦", label: "Active Inventory" },
@@ -792,7 +794,7 @@ function App() {
   const [chatStatus, setChatStatus] = useState({
     gemini_configured: false,
     masked_key: null,
-    active_model: "gemini-2.5-flash",
+    active_model: "gemini-3-flash-preview",
     knowledge_base_items_count: 25,
     env_file_location: "backend/.env"
   });
@@ -1458,12 +1460,14 @@ function App() {
     }
   };
 
-  const fetchSpoilageAlerts = async () => {
+  const fetchSpoilageAlerts = async (overrideToken = null) => {
+    const activeToken = overrideToken || token;
+    if (!activeToken) return;
     setSpoilageLoading(true);
     try {
       const response = await fetch(`${API_URL}/spoilage-alerts`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${activeToken}`,
         },
       });
       const data = await response.json();
@@ -1550,11 +1554,13 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const fetchInventory = async () => {
+  const fetchInventory = async (overrideToken = null) => {
+    const activeToken = overrideToken || token;
+    if (!activeToken) return;
     try {
       const response = await fetch(`${API_URL}/inventory`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${activeToken}`,
         },
       });
 
@@ -1720,12 +1726,17 @@ function App() {
         setOtpResendTimer(60);
         setOtpCode("");
       } else if (data.access_token) {
-        localStorage.setItem("token", data.access_token);
-        setToken(data.access_token);
+        const activeToken = data.access_token;
+        localStorage.setItem("token", activeToken);
+        setToken(activeToken);
         setUser(data.user);
         setView("app");
         setAuthEmail("");
         setAuthPassword("");
+        fetchSpoilageAlerts(activeToken);
+        fetchInventory(activeToken);
+        fetchExecutiveSummary();
+        fetchAnalyticsTrends();
       }
     } catch (err) {
       setAuthError(err.message);
@@ -1762,8 +1773,9 @@ function App() {
         throw new Error(data.detail || "OTP verification failed.");
       }
 
-      localStorage.setItem("token", data.access_token);
-      setToken(data.access_token);
+      const activeToken = data.access_token;
+      localStorage.setItem("token", activeToken);
+      setToken(activeToken);
       setUser(data.user);
       setView("app");
       setLoginStep("credentials");
@@ -1772,6 +1784,8 @@ function App() {
       setOtpCode("");
       setOtpDemoCode("");
       setOtpMessage("");
+      fetchSpoilageAlerts(activeToken);
+      fetchInventory(activeToken);
       fetchExecutiveSummary();
       fetchAnalyticsTrends();
     } catch (err) {
@@ -1909,6 +1923,13 @@ function App() {
     setUser(null);
     setHistory([]);
     setInventory([]);
+    setSpoilageAlerts([]);
+    setSpoilageStats({
+      total_alerts: 0,
+      critical_count: 0,
+      high_count: 0,
+      quarantined_count: 0
+    });
     setResult(null);
     setFile(null);
     setPreview(null);
@@ -2085,86 +2106,75 @@ function App() {
     });
   };
 
-  // Helper to compile active alerts matching the Alert Center requirements
+  // Helper to compile active alerts matching the Alert Center requirements directly from backend data
   const getDashboardAlerts = () => {
     const list = [];
+    const seenNames = new Set();
     const now = new Date();
 
-    // 1. Process active inventory items
-    (inventory || []).forEach((item, idx) => {
-      let daysLeft = 0;
-      if (item.expiry) {
-        const expDate = new Date(item.expiry);
-        const diffMs = expDate.getTime() - now.getTime();
-        daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-      }
-      const isRotten = (item.status || "").toLowerCase().includes("rotten") || (item.status || "").toLowerCase().includes("spoiled");
-
-      if (daysLeft <= 0 || isRotten) {
-        list.push({
-          id: item.id || `inv-${idx}`,
-          name: item.name || "Produce Item",
-          type: "EXPIRED",
-          severity: "expired",
-          icon: "🚨",
-          desc: daysLeft < 0 ? `Expired ${Math.abs(daysLeft)}d ago (${item.expiry || "Past"})` : `Expired today (${item.expiry || "Due"})`,
-          days_left: daysLeft,
-          item_id: item.id
-        });
-      } else if (daysLeft <= 3) {
-        list.push({
-          id: item.id || `inv-${idx}`,
-          name: item.name || "Produce Item",
-          type: "NEAR EXPIRY",
-          severity: "near-expiry",
-          icon: "⏳",
-          desc: daysLeft === 1 ? "Expires tomorrow." : `Expires in ${daysLeft} days.`,
-          days_left: daysLeft,
-          item_id: item.id
-        });
-      }
-    });
-
-    // 2. Add backend spoilage alerts
+    // 1. Process real backend spoilage alerts (from /spoilage-alerts MongoDB collection)
     (spoilageAlerts || []).forEach((sa, idx) => {
-      if (!list.some(l => l.name.toLowerCase() === (sa.food_name || "").toLowerCase())) {
-        const isCrit = sa.severity === "Critical";
-        list.push({
-          id: sa.id || `sa-${idx}`,
-          name: sa.food_name || "Food Item",
-          type: isCrit ? "EXPIRED" : "NEAR EXPIRY",
-          severity: isCrit ? "expired" : "near-expiry",
-          icon: isCrit ? "🚨" : "⏳",
-          desc: sa.reason || (isCrit ? "High spoilage risk detected." : "Action required soon."),
-          days_left: sa.days_left || 1,
-          item_id: sa.item_id
-        });
-      }
+      const name = (sa.title || sa.name || sa.food_name || "Produce Item").trim();
+      const isCrit = sa.severity === "Critical" || (sa.status || "").toLowerCase().includes("rotten") || (sa.status || "").toLowerCase().includes("spoiled");
+      const daysLeft = typeof sa.days_left === "number" ? sa.days_left : 0;
+      const alertType = isCrit || daysLeft <= 0 ? "EXPIRED" : "NEAR EXPIRY";
+      const desc = sa.action_required || sa.notes || (isCrit ? "High spoilage risk detected." : (daysLeft === 1 ? "Expires tomorrow." : `Expires in ${daysLeft} days.`));
+      const itemId = sa.source_id && sa.source_id.startsWith("inv-") ? sa.source_id.replace("inv-", "") : (sa.item_id || null);
+
+      seenNames.add(name.toLowerCase());
+      list.push({
+        id: sa.id || `sa-${idx}`,
+        name: name,
+        type: alertType,
+        severity: alertType === "EXPIRED" ? "expired" : "near-expiry",
+        icon: alertType === "EXPIRED" ? "🚨" : "⏳",
+        desc: desc,
+        days_left: daysLeft,
+        item_id: itemId
+      });
     });
 
-    // 3. Guarantee the demonstration items matching the Alert Center screenshot
-    const sampleItems = [
-      { name: "Beans", type: "EXPIRED", severity: "expired", icon: "🚨", desc: "Expired on 2026-10-08", days_left: -1 },
-      { name: "Guava", type: "NEAR EXPIRY", severity: "near-expiry", icon: "⏳", desc: "Expires in 3 days.", days_left: 3 },
-      { name: "Coconut", type: "NEAR EXPIRY", severity: "near-expiry", icon: "⏳", desc: "Expires tomorrow.", days_left: 1 },
-      { name: "Tomato", type: "NEAR EXPIRY", severity: "near-expiry", icon: "⏳", desc: "Expires tomorrow.", days_left: 1 },
-      { name: "Carrot", type: "NEAR EXPIRY", severity: "near-expiry", icon: "⏳", desc: "Expires tomorrow.", days_left: 1 },
-      { name: "Spinach", type: "NEAR EXPIRY", severity: "near-expiry", icon: "⏳", desc: "Consume within 48h to prevent wilting.", days_left: 2 },
-      { name: "Strawberries", type: "NEAR EXPIRY", severity: "near-expiry", icon: "⏳", desc: "Inspect for surface moisture.", days_left: 2 },
-      { name: "Fresh Milk", type: "EXPIRED", severity: "expired", icon: "🚨", desc: "Cold storage breach detected.", days_left: 0 }
-    ];
+    // 2. Process active inventory items that are near-expiry or expired and not yet represented in alerts
+    (inventory || []).forEach((item, idx) => {
+      let daysLeft = 999;
+      if (item.expiry && item.expiry !== "N/A") {
+        const expDate = new Date(item.expiry);
+        if (!isNaN(expDate.getTime())) {
+          const diffMs = expDate.getTime() - now.getTime();
+          daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        }
+      }
+      const isRotten = (item.status || "").toLowerCase().includes("rotten") || (item.status || "").toLowerCase().includes("spoiled") || (item.status || "").toLowerCase().includes("near");
 
-    sampleItems.forEach((s, idx) => {
-      if (list.length < 8 && !list.some(l => l.name.toLowerCase() === s.name.toLowerCase())) {
-        list.push({
-          id: `sample-${idx}`,
-          name: s.name,
-          type: s.type,
-          severity: s.severity,
-          icon: s.icon,
-          desc: s.desc,
-          days_left: s.days_left
-        });
+      const itemName = (item.name || "Produce Item").trim();
+      const alreadyInList = seenNames.has(itemName.toLowerCase()) || list.some(l => l.item_id === item.id);
+
+      if (!alreadyInList) {
+        if (daysLeft <= 0 || isRotten) {
+          seenNames.add(itemName.toLowerCase());
+          list.push({
+            id: item.id || `inv-${idx}`,
+            name: itemName,
+            type: "EXPIRED",
+            severity: "expired",
+            icon: "🚨",
+            desc: daysLeft < 0 ? `Expired ${Math.abs(daysLeft)}d ago (${item.expiry || "Past"})` : (daysLeft === 0 ? `Expired today (${item.expiry || "Due"})` : `Batch status: ${item.status || "At risk"}`),
+            days_left: daysLeft === 999 ? 0 : daysLeft,
+            item_id: item.id
+          });
+        } else if (daysLeft <= 3) {
+          seenNames.add(itemName.toLowerCase());
+          list.push({
+            id: item.id || `inv-${idx}`,
+            name: itemName,
+            type: "NEAR EXPIRY",
+            severity: "near-expiry",
+            icon: "⏳",
+            desc: daysLeft === 1 ? "Expires tomorrow." : `Expires in ${daysLeft} days.`,
+            days_left: daysLeft,
+            item_id: item.id
+          });
+        }
       }
     });
 
@@ -2446,36 +2456,8 @@ function App() {
           </div>
         </div>
 
-        <div style={{
-          margin: '10px 14px 14px',
-          padding: '10px 12px',
-          borderRadius: '10px',
-          background: (ROLE_DASHBOARDS[user?.role || "Consumer"] || ROLE_DASHBOARDS["Consumer"]).badgeBg,
-          border: `1px solid ${(ROLE_DASHBOARDS[user?.role || "Consumer"] || ROLE_DASHBOARDS["Consumer"]).badgeColor}40`,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px'
-        }}>
-          <span style={{
-            fontSize: '11px',
-            fontWeight: 850,
-            color: (ROLE_DASHBOARDS[user?.role || "Consumer"] || ROLE_DASHBOARDS["Consumer"]).badgeColor,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            {(ROLE_DASHBOARDS[user?.role || "Consumer"] || ROLE_DASHBOARDS["Consumer"]).roleHubTitle}
-          </span>
-          <span style={{
-            fontSize: '10.5px',
-            color: 'var(--gray-600)',
-            lineHeight: 1.35,
-            fontWeight: 500
-          }}>
-            {(ROLE_DASHBOARDS[user?.role || "Consumer"] || ROLE_DASHBOARDS["Consumer"]).roleSubtitle}
-          </span>
-        </div>
-
         <nav className="sidebar-nav">
+
           {((ROLE_DASHBOARDS[user?.role || "Consumer"] || ROLE_DASHBOARDS["Consumer"]).navItems).map(item => (
             <button
               key={item.id}
@@ -2505,32 +2487,20 @@ function App() {
                   fetchAdminUsers();
                 }
               }}
+              title={item.label}
             >
-              <span className="nav-icon">{item.icon}</span> {item.label}
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
               {item.chip && (
-                <span style={{
-                  marginLeft: 'auto',
-                  background: '#8b5cf6',
-                  color: 'white',
-                  fontSize: '9px',
-                  fontWeight: 800,
-                  padding: '2px 6px',
-                  borderRadius: '6px',
-                  letterSpacing: '0.4px',
-                  textTransform: 'uppercase'
+                <span className="nav-chip" style={{
+                  background: (ROLE_DASHBOARDS[user?.role || "Consumer"] || ROLE_DASHBOARDS["Consumer"]).badgeColor,
                 }}>
                   {item.chip}
                 </span>
               )}
               {item.hasBadge && spoilageStats.total_alerts > 0 && (
-                <span style={{
-                  marginLeft: 'auto',
+                <span className="nav-badge" style={{
                   background: spoilageStats.critical_count > 0 ? '#ef4444' : '#f59e0b',
-                  color: 'white',
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  padding: '2px 8px',
-                  borderRadius: '100px'
                 }}>
                   {spoilageStats.total_alerts}
                 </span>
@@ -2606,7 +2576,15 @@ function App() {
                 <button
                   type="button"
                   className={`topbar-bell-btn ${notificationOpen ? "active" : ""}`}
-                  onClick={() => setNotificationOpen(prev => !prev)}
+                  onClick={() => {
+                    setNotificationOpen(prev => {
+                      if (!prev) {
+                        fetchSpoilageAlerts();
+                        fetchInventory();
+                      }
+                      return !prev;
+                    });
+                  }}
                   title="Toggle Alert Center & Notifications"
                   aria-expanded={notificationOpen}
                 >
@@ -2641,34 +2619,46 @@ function App() {
                     </div>
 
                     <div className="dropdown-alert-list">
-                      {getDashboardAlerts().map((alert, idx) => (
-                        <div
-                          key={alert.id || idx}
-                          className={`alert-card-row ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}
-                          onClick={() => {
-                            setNotificationOpen(false);
-                            if (alert.item_id) {
-                              setActiveTab("inventory");
-                            } else {
-                              setActiveTab("spoilage");
-                            }
-                          }}
-                        >
-                          <div className="alert-item-left">
-                            <span className="alert-item-icon">{alert.icon || "⏳"}</span>
-                            <div className="alert-item-text">
-                              <div className="alert-item-header-line">
-                                <span className="alert-item-name">{alert.name}</span>
-                                <span className={`alert-status-badge ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}>
-                                  {alert.type}
-                                </span>
-                              </div>
-                              <p className="alert-item-desc">{alert.desc}</p>
-                            </div>
+                      {getDashboardAlerts().length === 0 ? (
+                        <div className="dropdown-alert-empty" style={{ padding: "32px 16px", textAlign: "center", color: "var(--gray-500)" }}>
+                          <span style={{ fontSize: "28px", display: "block", marginBottom: "8px" }}>✅</span>
+                          <div style={{ fontWeight: 700, color: "var(--dark)", fontSize: "14px", marginBottom: "4px" }}>
+                            All Batches Fresh
                           </div>
-                          <span className={`alert-dot-indicator ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}></span>
+                          <p style={{ fontSize: "12px", margin: 0, color: "var(--gray-500)" }}>
+                            No active spoilage hazards or expiring items detected in the backend.
+                          </p>
                         </div>
-                      ))}
+                      ) : (
+                        getDashboardAlerts().map((alert, idx) => (
+                          <div
+                            key={alert.id || idx}
+                            className={`alert-card-row ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}
+                            onClick={() => {
+                              setNotificationOpen(false);
+                              if (alert.item_id) {
+                                setActiveTab("inventory");
+                              } else {
+                                setActiveTab("spoilage");
+                              }
+                            }}
+                          >
+                            <div className="alert-item-left">
+                              <span className="alert-item-icon">{alert.icon || "⏳"}</span>
+                              <div className="alert-item-text">
+                                <div className="alert-item-header-line">
+                                  <span className="alert-item-name">{alert.name}</span>
+                                  <span className={`alert-status-badge ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}>
+                                    {alert.type}
+                                  </span>
+                                </div>
+                                <p className="alert-item-desc">{alert.desc}</p>
+                              </div>
+                            </div>
+                            <span className={`alert-dot-indicator ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}></span>
+                          </div>
+                        ))
+                      )}
                     </div>
 
                     <div className="dropdown-alert-footer">
@@ -5666,34 +5656,46 @@ function App() {
                   </div>
 
                   <div className="alert-list-container">
-                    {getDashboardAlerts().map((alert, idx) => (
-                      <div
-                        key={alert.id || idx}
-                        className={`alert-card-row ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}
-                        onClick={() => {
-                          if (alert.item_id) {
-                            setActiveTab("inventory");
-                          } else {
-                            setActiveTab("spoilage");
-                          }
-                        }}
-                        title="Click to view details in Inventory"
-                      >
-                        <div className="alert-item-left">
-                          <span className="alert-item-icon">{alert.icon || "⏳"}</span>
-                          <div className="alert-item-text">
-                            <div className="alert-item-header-line">
-                              <span className="alert-item-name">{alert.name}</span>
-                              <span className={`alert-status-badge ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}>
-                                {alert.type}
-                              </span>
-                            </div>
-                            <p className="alert-item-desc">{alert.desc}</p>
-                          </div>
+                    {getDashboardAlerts().length === 0 ? (
+                      <div className="alert-center-empty" style={{ padding: "36px 16px", textAlign: "center", color: "var(--gray-500)" }}>
+                        <span style={{ fontSize: "36px", display: "block", marginBottom: "10px" }}>✅</span>
+                        <div style={{ fontWeight: 700, color: "var(--dark)", fontSize: "15px", marginBottom: "6px" }}>
+                          No Active Spoilage Alerts
                         </div>
-                        <span className={`alert-dot-indicator ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}></span>
+                        <p style={{ fontSize: "13px", margin: 0, color: "var(--gray-500)" }}>
+                          All monitored inventory batches and produce scans are within safe shelf-life windows.
+                        </p>
                       </div>
-                    ))}
+                    ) : (
+                      getDashboardAlerts().map((alert, idx) => (
+                        <div
+                          key={alert.id || idx}
+                          className={`alert-card-row ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}
+                          onClick={() => {
+                            if (alert.item_id) {
+                              setActiveTab("inventory");
+                            } else {
+                              setActiveTab("spoilage");
+                            }
+                          }}
+                          title="Click to view details in Inventory"
+                        >
+                          <div className="alert-item-left">
+                            <span className="alert-item-icon">{alert.icon || "⏳"}</span>
+                            <div className="alert-item-text">
+                              <div className="alert-item-header-line">
+                                <span className="alert-item-name">{alert.name}</span>
+                                <span className={`alert-status-badge ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}>
+                                  {alert.type}
+                                </span>
+                              </div>
+                              <p className="alert-item-desc">{alert.desc}</p>
+                            </div>
+                          </div>
+                          <span className={`alert-dot-indicator ${alert.type === "EXPIRED" ? "expired" : "near-expiry"}`}></span>
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   <div className="alert-center-footer">

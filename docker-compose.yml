@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   mongodb:
@@ -14,7 +13,7 @@ services:
     networks:
       - freshcheck-network
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,12 +30,14 @@ services:
     environment:
       - MONGO_DETAILS=mongodb://mongodb:27017/food_freshness
       - ALLOWED_ORIGINS=http://localhost:5173,http://localhost,http://127.0.0.1:5173,http://127.0.0.1,http://frontend:80
-      - SECRET_KEY=${SECRET_KEY:-a176884d58b69f8927c5983674995695f610d34440a65dd7f8ff6e798721c3ea}
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in your .env file}
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - SMTP_FROM=${SMTP_FROM:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -45,7 +46,7 @@ services:
     networks:
       - freshcheck-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -64,7 +65,7 @@ services:
     networks:
       - freshcheck-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/" ]
       interval: 15s
       timeout: 5s
       retries: 3

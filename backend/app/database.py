@@ -474,6 +474,14 @@ class SpoilageAlert:
             return cls(doc)
 
     @classmethod
+    def find_all(cls, include_resolved: bool = False):
+        query: Dict[str, Any] = {}
+        if not include_resolved:
+            query["status_state"] = {"$in": ["Active", "Quarantined"]}
+        cursor = spoilage_alerts_collection.find(query).sort("updated_at", -1)
+        return [cls(doc) for doc in cursor]
+
+    @classmethod
     def find_by_user(cls, user_id: str, include_resolved: bool = False):
         query: Dict[str, Any] = {"user_id": user_id}
         if not include_resolved:
@@ -506,10 +514,10 @@ class SpoilageAlert:
             return False
 
     @classmethod
-    def sync_for_user(cls, user_id: str):
+    def sync_for_user(cls, user_id: str, is_all: bool = False):
         now = utc_now()
-        inv_items = Inventory.find_by_user(user_id)
-        scans = Prediction.find_by_user(user_id)
+        inv_items = Inventory.find_all() if is_all else Inventory.find_by_user(user_id)
+        scans = Prediction.find_all() if is_all else Prediction.find_by_user(user_id)
 
         for item in inv_items:
             # If item is already marked as Disposed, skip creating/activating an alert
@@ -530,8 +538,9 @@ class SpoilageAlert:
                 severity = "Critical" if (is_spoiled or days_left < 0) else "High"
                 directive = "Immediate write-off & disposal required" if severity == "Critical" else "Consume or freeze within 24-48 hours"
                 status_state = "Quarantined" if (item.status or "").lower() == "quarantined" else "Active"
+                target_user = getattr(item, "user_id", user_id) or user_id
                 cls.create_or_update(
-                    user_id=user_id,
+                    user_id=target_user,
                     source="Inventory Item",
                     source_id=source_id,
                     title=item.name,
@@ -545,11 +554,12 @@ class SpoilageAlert:
                     status_state=status_state
                 )
 
-        for scan in scans[:10]:
+        for scan in scans[:20]:
             if getattr(scan, "freshness", "").lower() in ["rotten", "spoiled"] or getattr(scan, "spoilage_risk", "").lower() in ["critical", "high"]:
                 source_id = f"scan-{scan.id}"
+                target_user = getattr(scan, "user_id", user_id) or user_id
                 cls.create_or_update(
-                    user_id=user_id,
+                    user_id=target_user,
                     source="Scanner Diagnostic",
                     source_id=source_id,
                     title=scan.food,
@@ -562,7 +572,10 @@ class SpoilageAlert:
                     action_required="Contamination hazard: isolate batch immediately from fresh inventory"
                 )
 
+        if is_all:
+            return cls.find_all(include_resolved=False)
         return cls.find_by_user(user_id, include_resolved=False)
+
 
 
 class OTPRecord:

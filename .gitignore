@@ -49,10 +49,9 @@ dataset/
 .idea/
 .DS_Store
 Thumbs.db
-.env
-*.db
-venv*/
-__pycache__/
-backend/uploads/
-node_modules/
-*.keras
+mentor_repo/
+Infosys_project/
+
+# Preserve pre-trained models
+!ml/models/*.keras
+

@@ -1,0 +1,49 @@
+# ============================================================
+# FreshCheck AI - Render Cloud Deployment Blueprint
+# Deploy both Backend (Docker) & Frontend (Static Site CDN)
+# ============================================================
+
+services:
+  # -----------------------------------------------------------
+  # 1. Backend REST API & Deep Learning Inference Engine
+  # -----------------------------------------------------------
+  - type: web
+    name: freshcheck-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: MONGO_DETAILS
+        sync: false # Paste your MongoDB Atlas Connection String in Render Dashboard
+      - key: SECRET_KEY
+        generateValue: true # Render automatically generates a secure 64-char key
+      - key: ALLOWED_ORIGINS
+        value: "http://localhost:5173,http://localhost"
+      - key: GEMINI_API_KEY
+        sync: false # Optional: for AI chatbot features
+
+  # -----------------------------------------------------------
+  # 2. Executive Web Dashboard (React 19 + Vite Static Site)
+  # -----------------------------------------------------------
+  - type: web
+    name: freshcheck-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    plan: free
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: freshcheck-backend
+          property: host

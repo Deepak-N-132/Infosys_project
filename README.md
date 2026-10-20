@@ -13,7 +13,7 @@ Built with Deep Learning (TensorFlow/Keras), FastAPI, MongoDB Atlas, Docker, and
 - **Executive Decision Intelligence (Milestone 4):** Real-time macroeconomic dashboards tracking active asset valuation ($), capital at risk, prevented spoilage loss, cold-chain SLA compliance, and ESG carbon avoidance (kg CO₂e).
 - **HACCP & ISO 22000 Compliance Reporting (Milestone 4):** Automated digital audit certificates with cryptographic certificate IDs, batch freshness ledgers, and one-click audit data export in **CSV** and **JSON** formats.
 - **IoT Storage Telemetry & Automated Climate Control:** Real-time sensor monitoring across warehouse cold storage zones with one-click automated cooling boost and climate excursion mitigation workflows.
-- **Automated Testing Suite (Milestone 4):** 20 automated unit and integration tests covering REST APIs, kinetic math, storage automation, and computer vision scoring (100% pass rate).
+- **Automated Testing Suite (Milestone 4):** 25 automated unit and integration tests covering REST APIs, kinetic math, storage automation, and computer vision scoring (100% pass rate).
 - **Containerized Cloud Deployment (Milestone 4):** Production multi-stage Dockerfiles for backend and frontend with Nginx reverse proxying, health checks, and single-command `docker-compose` orchestration.
 
 ---
@@ -31,7 +31,7 @@ Built with Deep Learning (TensorFlow/Keras), FastAPI, MongoDB Atlas, Docker, and
 │   │   ├── inventory_insights.py      # Inventory risk metrics & spoilage categorization
 │   │   ├── recommendation_engine.py   # Prescriptive clearance & mitigation workflows
 │   │   └── storage_monitoring.py      # IoT zone telemetry & cooling boost automation
-│   ├── tests/                         # Pytest automated test suite (20 tests)
+│   ├── tests/                         # Pytest automated test suite (25 tests)
 │   │   ├── conftest.py                # Test fixtures & TestClient configuration
 │   │   ├── test_api_endpoints.py      # REST endpoint validation & status codes
 │   │   ├── test_shelf_life_engine.py  # Arrhenius kinetics & decay validation
@@ -106,7 +106,7 @@ docker compose down
 cd backend
 pip install -r requirements.txt
 
-# Run the automated pytest suite (20 tests)
+# Run the automated pytest suite (25 tests)
 pytest tests/ -v
 
 # Start the development API server
@@ -139,8 +139,8 @@ pytest tests/ -v
 ```
 
 **Results:**
-- Total tests: **20**
-- Passing: **20 (100% pass rate)**
+- Total tests: **25**
+- Passing: **25 (100% pass rate)**
 - Execution time: **~1.07 seconds**
 
 ---
