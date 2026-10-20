@@ -221,7 +221,7 @@ def send_otp_via_brevo(api_key: str, sender_email: str, recipient_email: str, ot
             "api-key": api_key,
             "content-type": "application/json"
         }
-        from_email = sender_email if ("@" in sender_email and "noreply" not in sender_email) else "freshcheck.alerts@gmail.com"
+        from_email = sender_email if ("@" in sender_email and "noreply" not in sender_email) else "deepaknandi2006@gmail.com"
         payload = {
             "sender": {"name": "FreshCheck AI", "email": from_email},
             "to": [{"email": recipient_email}],
@@ -516,13 +516,15 @@ def debug_smtp(test_email: Optional[str] = None):
     smtp_from = (os.getenv("SMTP_FROM") or "").strip()
 
     if test_email:
+        debug_res = {"test_email": test_email}
+        if brevo_api_key:
+            html = "<p>Test code: 777888</p>"
+            from_addr = smtp_from or smtp_user or "deepaknandi2006@gmail.com"
+            ok_b, msg_b = send_otp_via_brevo(brevo_api_key, from_addr, test_email, "777888", html)
+            debug_res["brevo_direct"] = {"success": ok_b, "detail": msg_b, "from_addr": from_addr}
         ok, msg = send_otp_email(test_email, "777888")
-        return {
-            "test_email": test_email,
-            "success": ok,
-            "message": msg,
-            "provider": "Brevo" if brevo_api_key else ("Resend" if resend_api_key else "SMTP")
-        }
+        debug_res["overall"] = {"success": ok, "message": msg}
+        return debug_res
 
     try:
         smtp_port = int(smtp_port_str)
