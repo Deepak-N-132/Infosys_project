@@ -516,7 +516,15 @@ def debug_smtp(test_email: Optional[str] = None):
     smtp_from = (os.getenv("SMTP_FROM") or "").strip()
 
     if test_email:
-        debug_res = {"test_email": test_email}
+        debug_res = {
+            "test_email": test_email,
+            "brevo_key_info": {
+                "configured": bool(brevo_api_key),
+                "prefix": (brevo_api_key[:10] + "...") if brevo_api_key else "NOT_SET",
+                "length": len(brevo_api_key),
+                "starts_with_xkeysib": brevo_api_key.startswith("xkeysib-"),
+            }
+        }
         if brevo_api_key:
             html = "<p>Test code: 777888</p>"
             from_addr = smtp_from or smtp_user or "deepaknandi2006@gmail.com"
