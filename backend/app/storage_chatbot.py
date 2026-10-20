@@ -509,10 +509,9 @@ def save_gemini_api_key(new_key: str) -> bool:
 
 CANDIDATE_MODELS = [
     "gemini-3-flash-preview",
-    "gemini-flash-latest",
-    "gemini-3.8-flash",
     "gemini-3.5-flash-lite",
-    "gemini-2.5-flash"
+    "gemini-flash-latest",
+    "gemini-3.8-flash"
 ]
 
 

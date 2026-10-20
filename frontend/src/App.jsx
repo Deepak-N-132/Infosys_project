@@ -2780,7 +2780,60 @@ function App() {
                       )}
                     </div>
 
-                    {error && <div className="error">{error}</div>}
+                    {error && (
+                      <div
+                        className="error"
+                        style={
+                          error.toLowerCase().includes("unsupported") || error.toLowerCase().includes("produce")
+                            ? {
+                                background: "#fff1f2",
+                                border: "1.5px solid #fecdd3",
+                                color: "#9f1239",
+                                textAlign: "left",
+                                padding: "18px 20px",
+                                borderRadius: "14px",
+                                marginTop: "18px",
+                                boxShadow: "0 4px 12px rgba(159, 18, 57, 0.08)"
+                              }
+                            : {}
+                        }
+                      >
+                        {error.toLowerCase().includes("unsupported") || error.toLowerCase().includes("produce") ? (
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                              <span style={{ fontSize: "20px" }}>⚠️</span>
+                              <strong style={{ fontSize: "15px", color: "#881337" }}>
+                                Unsupported Item Detected
+                              </strong>
+                            </div>
+                            <p style={{ margin: 0, fontSize: "13.5px", lineHeight: "1.55", color: "#4c0519" }}>
+                              {error}
+                            </p>
+                            <div style={{ marginTop: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab("storage_advisor")}
+                                className="auth-btn"
+                                style={{
+                                  margin: 0,
+                                  width: "auto",
+                                  padding: "8px 16px",
+                                  fontSize: "12.5px",
+                                  fontWeight: 700,
+                                  background: "#be123c",
+                                  color: "white",
+                                  borderRadius: "10px"
+                                }}
+                              >
+                                🤖 Ask Storage Advisor for Guidelines
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          error
+                        )}
+                      </div>
+                    )}
                   </section>
 
                   {result && (
