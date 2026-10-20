@@ -25,6 +25,8 @@ services:
         value: "http://localhost:5173,http://localhost"
       - key: GEMINI_API_KEY
         sync: false # Optional: for AI chatbot features
+      - key: SENTRY_DSN
+        value: "https://93c713bcf7c235262c8bdbc9ee769be0@o4512289937752064.ingest.us.sentry.io/4512289976025088"
 
   # -----------------------------------------------------------
   # 2. Executive Web Dashboard (React 19 + Vite Static Site)

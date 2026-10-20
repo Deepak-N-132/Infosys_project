@@ -76,6 +76,21 @@ PROJECT_DIR = os.path.dirname(BASE_DIR)                                 # projec
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 load_dotenv(os.path.join(PROJECT_DIR, ".env"))
 
+# ============================================================
+# SENTRY ERROR MONITORING & AI AUTOFIX INITIALIZATION
+# ============================================================
+SENTRY_DSN = (os.getenv("SENTRY_DSN") or "").strip()
+if SENTRY_DSN and not SENTRY_DSN.startswith("your_"):
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            traces_sample_rate=1.0,
+        )
+        print("[SENTRY] Production error monitoring & AI Autofix initialized successfully.")
+    except Exception as _sentry_err:
+        print(f"[SENTRY-WARN] Could not initialize Sentry: {_sentry_err}")
+
 MODEL_PATH = os.getenv(
     "MODEL_PATH",
     os.path.join(PROJECT_DIR, "ml", "models", "food_freshness_model.keras"),
@@ -396,6 +411,13 @@ def database_status():
         "success": True,
         "db": get_db_info()
     }
+
+
+@app.get("/sentry-debug")
+async def trigger_sentry_error():
+    """Diagnostic route to test Sentry error monitoring and AI Autofix."""
+    division_by_zero = 1 / 0
+    return {"result": division_by_zero}
 
 
 # ============================================================
