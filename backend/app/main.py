@@ -212,144 +212,53 @@ class SaveApiKeyRequest(BaseModel):
     gemini_api_key: Optional[str] = None
 
 
-def send_otp_via_brevo(api_key: str, sender_email: str, recipient_email: str, otp_code: str, html_body: str) -> tuple[bool, str]:
-    try:
-        import httpx
-        url = "https://api.brevo.com/v3/smtp/email"
-        headers = {
-            "accept": "application/json",
-            "api-key": api_key,
-            "content-type": "application/json"
-        }
-        from_email = sender_email if ("@" in sender_email and "noreply" not in sender_email) else "deepaknandi2006@gmail.com"
-        payload = {
-            "sender": {"name": "FreshCheck AI", "email": from_email},
-            "to": [{"email": recipient_email}],
-            "subject": f"Your Login Verification OTP Code: {otp_code}",
-            "htmlContent": html_body
-        }
-        resp = httpx.post(url, headers=headers, json=payload, timeout=12.0)
-        if resp.status_code in (200, 201, 202):
-            return True, "Email delivered via Brevo HTTPS API"
-        return False, f"Brevo API error ({resp.status_code}): {resp.text}"
-    except Exception as e:
-        return False, f"Brevo request failed: {e}"
+def send_otp_email(email: str, otp_code: str) -> bool:
+    smtp_host = os.getenv("SMTP_HOST", "")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_pass = os.getenv("SMTP_PASSWORD", "")
+    sender_email = os.getenv("SMTP_FROM", smtp_user or "noreply@freshcheck.ai")
 
-
-def send_otp_via_resend(api_key: str, sender_email: str, recipient_email: str, otp_code: str, html_body: str) -> tuple[bool, str]:
-    try:
-        import httpx
-        url = "https://api.resend.com/emails"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        # Free Resend without verified custom domain uses onboarding@resend.dev
-        from_addr = sender_email if ("@" in sender_email and not sender_email.endswith("@gmail.com")) else "FreshCheck AI <onboarding@resend.dev>"
-        payload = {
-            "from": from_addr,
-            "to": [recipient_email],
-            "subject": f"Your Login Verification OTP Code: {otp_code}",
-            "html": html_body
-        }
-        resp = httpx.post(url, headers=headers, json=payload, timeout=12.0)
-        if resp.status_code in (200, 201, 202):
-            return True, "Email delivered via Resend HTTPS API"
-        return False, f"Resend API error ({resp.status_code}): {resp.text}"
-    except Exception as e:
-        return False, f"Resend request failed: {e}"
-
-
-def send_otp_email(email: str, otp_code: str) -> tuple[bool, str]:
-    brevo_api_key = (os.getenv("BREVO_API_KEY") or "").strip()
-    resend_api_key = (os.getenv("RESEND_API_KEY") or "").strip()
-    smtp_host = (os.getenv("SMTP_HOST") or "").strip()
-    smtp_port_str = (os.getenv("SMTP_PORT") or "587").strip()
-    try:
-        smtp_port = int(smtp_port_str)
-    except ValueError:
-        smtp_port = 587
-    smtp_user = (os.getenv("SMTP_USER") or "").strip()
-    # Strip any accidental spaces from Google 16-character App Password
-    smtp_pass = (os.getenv("SMTP_PASSWORD") or "").strip().replace(" ", "")
-    sender_email = (os.getenv("SMTP_FROM") or "").strip() or smtp_user or "noreply@freshcheck.ai"
-
-    html_body = f"""
-    <html>
-      <body style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px; color: #333;">
-        <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-          <h2 style="color: #10b981; margin-top: 0;">FreshCheck AI Login</h2>
-          <p>Hello,</p>
-          <p>You requested to log in to FreshCheck AI. Use the verification code below to complete your login:</p>
-          <div style="text-align: center; margin: 25px 0;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; background-color: #ecfdf5; color: #059669; padding: 12px 24px; border-radius: 6px; border: 1px dashed #10b981;">
-              {otp_code}
-            </span>
-          </div>
-          <p style="font-size: 14px; color: #6b7280;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin-top: 25px;" />
-          <p style="font-size: 12px; color: #9ca3af; text-align: center; margin-bottom: 0;">&copy; FreshCheck AI. All rights reserved.</p>
-        </div>
-      </body>
-    </html>
-    """
-
-    # 1. Try Brevo HTTPS API (Port 443, unrestricted on Render Free)
-    if brevo_api_key:
-        ok, msg = send_otp_via_brevo(brevo_api_key, sender_email, email, otp_code, html_body)
-        if ok:
-            print(f"[EMAIL-SENT] {msg} to {email}")
-            return True, msg
-        print(f"[BREVO-WARN] {msg}")
-
-    # 2. Try Resend HTTPS API (Port 443, unrestricted on Render Free)
-    if resend_api_key:
-        ok, msg = send_otp_via_resend(resend_api_key, sender_email, email, otp_code, html_body)
-        if ok:
-            print(f"[EMAIL-SENT] {msg} to {email}")
-            return True, msg
-        print(f"[RESEND-WARN] {msg}")
-
-    # 3. Fallback to standard SMTP (Port 587 / 465)
     if not smtp_host or not smtp_user or not smtp_pass:
-        print(f"[DEMO MODE] Missing email settings. OTP for {email} is: {otp_code}")
-        return False, "Email configuration missing in environment."
+        print(f"[DEMO MODE] OTP for {email} is: {otp_code}")
+        return False
 
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = f"Your Login Verification OTP Code: {otp_code}"
         msg["From"] = sender_email
         msg["To"] = email
+
+        html_body = f"""
+        <html>
+          <body style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px; color: #333;">
+            <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+              <h2 style="color: #10b981; margin-top: 0;">FreshCheck AI Login</h2>
+              <p>Hello,</p>
+              <p>You requested to log in to FreshCheck AI. Use the verification code below to complete your login:</p>
+              <div style="text-align: center; margin: 25px 0;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; background-color: #ecfdf5; color: #059669; padding: 12px 24px; border-radius: 6px; border: 1px dashed #10b981;">
+                  {otp_code}
+                </span>
+              </div>
+              <p style="font-size: 14px; color: #6b7280;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin-top: 25px;" />
+              <p style="font-size: 12px; color: #9ca3af; text-align: center; margin-bottom: 0;">&copy; FreshCheck AI. All rights reserved.</p>
+            </div>
+          </body>
+        </html>
+        """
         msg.attach(MIMEText(html_body, "html"))
 
-        # Support both port 465 (SSL) and port 587 (STARTTLS) with automatic failover
-        if smtp_port == 465:
-            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=12) as server:
-                server.login(smtp_user, smtp_pass)
-                server.sendmail(sender_email, [email], msg.as_string())
-        else:
-            try:
-                with smtplib.SMTP(smtp_host, smtp_port, timeout=12) as server:
-                    server.starttls()
-                    server.login(smtp_user, smtp_pass)
-                    server.sendmail(sender_email, [email], msg.as_string())
-            except Exception as starttls_err:
-                print(f"[SMTP-WARN] Port {smtp_port} STARTTLS failed ({starttls_err}), trying port 465 SSL fallback...")
-                with smtplib.SMTP_SSL(smtp_host, 465, timeout=12) as server_ssl:
-                    server_ssl.login(smtp_user, smtp_pass)
-                    server_ssl.sendmail(sender_email, [email], msg.as_string())
-
-        return True, "Email sent successfully via SMTP"
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(sender_email, [email], msg.as_string())
+        return True
     except Exception as e:
-        err_msg = str(e)
-        print(f"[SMTP-ERROR] Failed to send email to {email}: {err_msg}")
+        print(f"Failed to send email to {email}: {e}")
         print(f"[DEMO FALLBACK] OTP for {email} is: {otp_code}")
-        try:
-            import sentry_sdk
-            sentry_sdk.capture_exception(e)
-        except Exception:
-            pass
-        return False, err_msg
+        return False
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -504,134 +413,11 @@ def database_status():
     }
 
 
-@app.get("/debug-smtp")
-def debug_smtp(test_email: Optional[str] = None):
-    """Diagnostic endpoint to inspect live SMTP/API connection and test email delivery."""
-    brevo_api_key = (os.getenv("BREVO_API_KEY") or "").strip()
-    resend_api_key = (os.getenv("RESEND_API_KEY") or "").strip()
-    smtp_host = (os.getenv("SMTP_HOST") or "").strip()
-    smtp_port_str = (os.getenv("SMTP_PORT") or "587").strip()
-    smtp_user = (os.getenv("SMTP_USER") or "").strip()
-    smtp_pass = (os.getenv("SMTP_PASSWORD") or "").strip().replace(" ", "")
-    smtp_from = (os.getenv("SMTP_FROM") or "").strip()
-
-    if test_email:
-        debug_res = {
-            "test_email": test_email,
-            "brevo_key_info": {
-                "configured": bool(brevo_api_key),
-                "prefix": (brevo_api_key[:10] + "...") if brevo_api_key else "NOT_SET",
-                "length": len(brevo_api_key),
-                "starts_with_xkeysib": brevo_api_key.startswith("xkeysib-"),
-            }
-        }
-        if brevo_api_key:
-            html = "<p>Test code: 777888</p>"
-            from_addr = smtp_from or smtp_user or "deepaknandi2006@gmail.com"
-            ok_b, msg_b = send_otp_via_brevo(brevo_api_key, from_addr, test_email, "777888", html)
-            debug_res["brevo_direct"] = {"success": ok_b, "detail": msg_b, "from_addr": from_addr}
-        ok, msg = send_otp_email(test_email, "777888")
-        debug_res["overall"] = {"success": ok, "message": msg}
-        return debug_res
-
-    try:
-        smtp_port = int(smtp_port_str)
-    except ValueError:
-        smtp_port = 587
-
-    masked_user = (smtp_user[:3] + "***" + smtp_user[smtp_user.find("@"):]) if "@" in smtp_user else (smtp_user[:2] + "***" if smtp_user else "NOT_SET")
-    pass_len = len(smtp_pass)
-
-    info = {
-        "brevo_configured": bool(brevo_api_key),
-        "resend_configured": bool(resend_api_key),
-        "smtp_host": smtp_host or "NOT_SET",
-        "smtp_port": smtp_port,
-        "smtp_user_masked": masked_user,
-        "smtp_pass_length": pass_len,
-        "smtp_from": smtp_from or "NOT_SET",
-    }
-
-    if brevo_api_key:
-        return {
-            "success": True,
-            "status": "HTTP_API_ACTIVE",
-            "provider": "Brevo (Sendinblue) HTTPS API (Port 443)",
-            "message": "Brevo HTTPS API is configured and unblocked on Render! Real emails will be delivered directly to registered inboxes.",
-            "details": info
-        }
-
-    if resend_api_key:
-        return {
-            "success": True,
-            "status": "HTTP_API_ACTIVE",
-            "provider": "Resend HTTPS API (Port 443)",
-            "message": "Resend HTTPS API is configured and unblocked on Render! Real emails will be delivered directly.",
-            "details": info
-        }
-
-    if not smtp_host or not smtp_user or not smtp_pass:
-        return {
-            "success": False,
-            "status": "MISSING_CONFIG",
-            "message": "Neither Brevo/Resend API key nor complete SMTP variables are set.",
-            "details": info
-        }
-
-    errors = []
-    try:
-        if smtp_port == 465:
-            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as s:
-                s.login(smtp_user, smtp_pass)
-                return {
-                    "success": True,
-                    "status": "AUTHENTICATED",
-                    "mode": f"SSL on port {smtp_port}",
-                    "message": "Successfully connected and authenticated with SMTP server!",
-                    "details": info
-                }
-        else:
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as s:
-                s.starttls()
-                s.login(smtp_user, smtp_pass)
-                return {
-                    "success": True,
-                    "status": "AUTHENTICATED",
-                    "mode": f"STARTTLS on port {smtp_port}",
-                    "message": "Successfully connected and authenticated with SMTP server!",
-                    "details": info
-                }
-    except Exception as e:
-        errors.append(f"Port {smtp_port} attempt: {type(e).__name__}: {e}")
-
-    if smtp_port != 465:
-        try:
-            with smtplib.SMTP_SSL(smtp_host, 465, timeout=10) as s:
-                s.login(smtp_user, smtp_pass)
-                return {
-                    "success": True,
-                    "status": "AUTHENTICATED",
-                    "mode": "SSL on port 465 (fallback)",
-                    "message": "Successfully authenticated via port 465 SSL fallback!",
-                    "details": info
-                }
-        except Exception as e:
-            errors.append(f"Port 465 fallback attempt: {type(e).__name__}: {e}")
-
-    return {
-        "success": False,
-        "status": "AUTH_OR_CONNECTION_FAILED",
-        "message": "SMTP handshake or authentication failed. (Note: Render Free tier blocks outbound TCP on ports 25, 465, and 587. Configure BREVO_API_KEY to send emails via unrestricted HTTPS port 443).",
-        "errors": errors,
-        "details": info
-    }
-
-
 @app.get("/sentry-debug")
 async def trigger_sentry_error():
     """Diagnostic route to test Sentry error monitoring and AI Autofix."""
-    zero_val = 0
-    division_by_zero = 1 / zero_val
+    zero_divisor = int("0")
+    division_by_zero = 1 / zero_divisor
     return {"result": division_by_zero}
 
 
@@ -2127,7 +1913,7 @@ def login_user(login_data: UserLogin):
         otp_code = f"{secrets.randbelow(900000) + 100000}"
         OTPRecord.save_otp(user.email, otp_code, expires_in_seconds=300)
 
-        sent_email, email_error = send_otp_email(user.email, otp_code)
+        sent_email = send_otp_email(user.email, otp_code)
 
         res = {
             "status": "otp_required",
@@ -2137,7 +1923,6 @@ def login_user(login_data: UserLogin):
         }
         if not sent_email:
             res["demo_otp"] = otp_code
-            res["smtp_notice"] = email_error
         return res
     except HTTPException:
         raise
@@ -2222,7 +2007,7 @@ def resend_otp(resend_data: ResendOTPRequest):
         otp_code = f"{secrets.randbelow(900000) + 100000}"
         OTPRecord.save_otp(user.email, otp_code, expires_in_seconds=300)
 
-        sent_email, email_error = send_otp_email(user.email, otp_code)
+        sent_email = send_otp_email(user.email, otp_code)
 
         res = {
             "success": True,
@@ -2231,7 +2016,6 @@ def resend_otp(resend_data: ResendOTPRequest):
         }
         if not sent_email:
             res["demo_otp"] = otp_code
-            res["smtp_notice"] = email_error
         return res
     except HTTPException:
         raise
