@@ -634,6 +634,54 @@
   text-transform: capitalize;
 }
 
+.topbar-role-select {
+  background: #ffffff;
+  border: 1px solid var(--gray-300);
+  color: var(--gray-800);
+  font-size: 12px;
+  font-weight: 650;
+  padding: 5px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.topbar-role-select:hover {
+  border-color: var(--primary);
+}
+
+.topbar-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.topbar-logout-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+  transform: translateY(-1px);
+}
+
+.topbar-logout-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 .brand-container {
   display: flex;
   justify-content: space-between;

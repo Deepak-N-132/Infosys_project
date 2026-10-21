@@ -414,12 +414,13 @@ const ROLE_DASHBOARDS = {
     badge: "Consumer",
     badgeColor: "#10b981",
     badgeBg: "rgba(16, 185, 129, 0.12)",
-    defaultTab: "scanner",
+    defaultTab: "executive",
     roleHubTitle: "Consumer Dashboard",
     roleSubtitle: "Manage personal items, scan food, view freshness and shelf-life guidance.",
-    allowedTabs: ["scanner", "inventory", "register_food", "spoilage", "shelf_life", "recommendations", "storage_advisor", "reports", "analytics"],
-    restrictedTabs: ["executive", "storage_monitoring", "storage_compliance", "users"],
+    allowedTabs: ["executive", "scanner", "inventory", "register_food", "spoilage", "shelf_life", "recommendations", "storage_advisor", "reports", "analytics"],
+    restrictedTabs: ["storage_monitoring", "storage_compliance", "users"],
     navItems: [
+      { id: "executive", icon: "📊", label: "Executive Dashboard" },
       { id: "scanner", icon: "🔍", label: "Produce Scanner" },
       { id: "inventory", icon: "📦", label: "Personal Inventory" },
       { id: "register_food", icon: "➕", label: "Register Produce" },
@@ -434,12 +435,13 @@ const ROLE_DASHBOARDS = {
     badge: "Retail Manager",
     badgeColor: "#059669",
     badgeBg: "rgba(5, 150, 105, 0.12)",
-    defaultTab: "inventory",
+    defaultTab: "executive",
     roleHubTitle: "Retail Manager Dashboard",
     roleSubtitle: "Review stock risks, record sales, and update item status.",
-    allowedTabs: ["inventory", "recommendations", "spoilage", "analytics", "reports", "scanner", "register_food", "storage_advisor"],
-    restrictedTabs: ["executive", "storage_monitoring", "storage_compliance", "users"],
+    allowedTabs: ["executive", "inventory", "recommendations", "spoilage", "analytics", "reports", "scanner", "register_food", "storage_advisor"],
+    restrictedTabs: ["storage_monitoring", "storage_compliance", "users"],
     navItems: [
+      { id: "executive", icon: "📊", label: "Executive Dashboard" },
       { id: "inventory", icon: "📦", label: "Store Inventory", chip: "Sales" },
       { id: "recommendations", icon: "💡", label: "Stock Risks & FEFO" },
       { id: "spoilage", icon: "⚠️", label: "Stock Risk Radar", hasBadge: true },
@@ -454,12 +456,13 @@ const ROLE_DASHBOARDS = {
     badge: "Warehouse Operator",
     badgeColor: "#8b5cf6",
     badgeBg: "rgba(139, 92, 246, 0.12)",
-    defaultTab: "storage_monitoring",
+    defaultTab: "executive",
     roleHubTitle: "Warehouse Operator Dashboard",
     roleSubtitle: "Review storage readings, compliance alerts, and stock actions.",
-    allowedTabs: ["storage_monitoring", "spoilage", "shelf_life", "storage_compliance", "inventory", "register_food", "recommendations", "scanner", "reports", "storage_advisor"],
-    restrictedTabs: ["executive", "users"],
+    allowedTabs: ["executive", "storage_monitoring", "spoilage", "shelf_life", "storage_compliance", "inventory", "register_food", "recommendations", "scanner", "reports", "storage_advisor"],
+    restrictedTabs: ["users"],
     navItems: [
+      { id: "executive", icon: "📊", label: "Executive Dashboard" },
       { id: "storage_monitoring", icon: "🌡️", label: "Storage Readings", chip: "Live" },
       { id: "spoilage", icon: "⚠️", label: "Compliance Alerts", hasBadge: true },
       { id: "shelf_life", icon: "🧠", label: "Shelf-Life Control", chip: "Operator" },
@@ -476,12 +479,13 @@ const ROLE_DASHBOARDS = {
     badge: "Food Quality Inspector",
     badgeColor: "#d97706",
     badgeBg: "rgba(217, 119, 6, 0.12)",
-    defaultTab: "scanner",
+    defaultTab: "executive",
     roleHubTitle: "Food Quality Inspector Dashboard",
     roleSubtitle: "Inspect food, review analysis, and produce reports.",
-    allowedTabs: ["scanner", "shelf_life", "spoilage", "reports", "analytics", "inventory", "storage_advisor"],
-    restrictedTabs: ["executive", "storage_compliance", "users"],
+    allowedTabs: ["executive", "scanner", "shelf_life", "spoilage", "reports", "analytics", "inventory", "storage_advisor"],
+    restrictedTabs: ["storage_compliance", "users"],
     navItems: [
+      { id: "executive", icon: "📊", label: "Executive Dashboard" },
       { id: "scanner", icon: "🔍", label: "Produce Scanner" },
       { id: "shelf_life", icon: "🧠", label: "Shelf-Life Analysis" },
       { id: "spoilage", icon: "⚠️", label: "Spoilage Risk Radar", hasBadge: true },
@@ -543,7 +547,14 @@ function App() {
   // Authentication States
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [user, setUser] = useState(null);
-  const [view, setView] = useState(localStorage.getItem("token") ? "app" : "login");
+  const [view, setView] = useState(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === "#login") return "login";
+      if (hash === "#register") return "register";
+    }
+    return localStorage.getItem("token") ? "app" : "login";
+  });
   const [authName, setAuthName] = useState("");
   const [authRole, setAuthRole] = useState("Consumer");
   const [authEmail, setAuthEmail] = useState("");
@@ -585,7 +596,7 @@ function App() {
     if (hash === "inventory" || path === "/inventory") return "inventory";
     if (hash === "spoilage" || path === "/spoilage") return "spoilage";
     if (hash === "users") return "users";
-    return "scanner";
+    return "executive";
   });
 
   // Topbar Notification Alert Dropdown State & Click-outside ref
@@ -1947,6 +1958,9 @@ function App() {
     setOtpDemoCode("");
     setOtpMessage("");
     setAuthError("");
+    if (typeof window !== "undefined") {
+      window.location.hash = "login";
+    }
   };
 
 
@@ -2516,21 +2530,19 @@ function App() {
           ))}
         </nav>
 
-        {user && (
-          <div className="sidebar-profile">
-            <div className="profile-details">
-              <span className="profile-avatar">👤</span>
-              <div className="profile-info">
-                <strong>{user.name}</strong>
-                <span>{user.email}</span>
-                <span className="role-badge">{user.role}</span>
-              </div>
+        <div className="sidebar-profile">
+          <div className="profile-details">
+            <span className="profile-avatar">👤</span>
+            <div className="profile-info">
+              <strong>{user?.name || "Active Session"}</strong>
+              <span>{user?.email || "Authenticated"}</span>
+              <span className="role-badge">{user?.role || "Consumer"}</span>
             </div>
-            <button onClick={handleLogout} className="sidebar-logout-btn">
-              <LogoutIcon /> Logout
-            </button>
           </div>
-        )}
+          <button onClick={handleLogout} className="sidebar-logout-btn" title="Sign out of account">
+            <LogoutIcon /> Logout
+          </button>
+        </div>
       </aside>
 
       {/* Main Content Area */}
@@ -2696,11 +2708,42 @@ function App() {
               </div>
 
 
-              <div className="topbar-user-chip">
+              <div className="topbar-user-chip" title="Current Active Profile">
                 <span className="topbar-user-icon">👤</span>
                 <span className="topbar-user-name">{user?.name || "User"}</span>
                 <span className="topbar-role-badge">{user?.role || "Consumer"}</span>
               </div>
+
+              <select
+                className="topbar-role-select"
+                value={user?.role || "Consumer"}
+                onChange={(e) => {
+                  const newRole = e.target.value;
+                  setUser((prev) =>
+                    prev
+                      ? { ...prev, role: newRole }
+                      : { name: "User", email: "user@freshcheck.ai", role: newRole }
+                  );
+                }}
+                title="Switch Dashboard Perspective"
+              >
+                <option value="Consumer">Consumer</option>
+                <option value="Retail Manager">Retail Manager</option>
+                <option value="Warehouse Operator">Warehouse Operator</option>
+                <option value="Food Quality Inspector">Quality Inspector</option>
+                <option value="Enterprise Manager">Enterprise Manager</option>
+                <option value="Administrator">Administrator</option>
+              </select>
+
+              <button
+                type="button"
+                className="topbar-logout-btn"
+                onClick={handleLogout}
+                title="Log out and return to sign in screen"
+              >
+                <LogoutIcon />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
         </header>
